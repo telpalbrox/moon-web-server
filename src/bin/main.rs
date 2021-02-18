@@ -4,12 +4,13 @@ use std::net::{TcpListener, TcpStream};
 use std::thread;
 use std::time::Duration;
 use webserver::thread_pool::ThreadPool;
+use webserver::http_parser::HttpParser;
 
 fn main() {
     let listener = TcpListener::bind("127.0.0.1:7878").unwrap();
     let pool = ThreadPool::new(4);
 
-    for stream in listener.incoming().take(2) {
+    for stream in listener.incoming() {
         let stream = stream.unwrap();
 
         pool.execute(|| {
@@ -21,14 +22,15 @@ fn main() {
 fn handle_connection(mut stream: TcpStream) {
     let mut buffer = [0; 512];
     stream.read(&mut buffer).unwrap();
-    println!("request {}", String::from_utf8_lossy(&buffer));
+    let raw_request = String::from_utf8_lossy(&buffer);
+    // println!("raw_request: {:?}", raw_request);
 
-    let get = b"GET / HTTP/1.1\r\n";
-    let sleep = b"GET /sleep HTTP/1.1\r\n";
+    let request = HttpParser::new(raw_request.as_ref().to_owned()).parse();
+    // println!("request: {:?}", request);
 
-    let (status_line, filename) = if buffer.starts_with(get) {
+    let (status_line, filename) = if request.uri == "/" {
         ("HTTP/1.1 200 OK", "hello.html")
-    } else if buffer.starts_with(sleep) {
+    } else if request.uri == "/sleep" {
         thread::sleep(Duration::from_secs(5));
         ("HTTP/1.1 200 OK", "hello.html")
     } else {
