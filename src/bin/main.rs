@@ -3,7 +3,7 @@ use std::io::prelude::*;
 use std::net::{TcpListener, TcpStream};
 use std::thread;
 use std::time::Duration;
-use webserver::ThreadPool;
+use webserver::thread_pool::ThreadPool;
 
 fn main() {
     let listener = TcpListener::bind("127.0.0.1:7878").unwrap();
@@ -21,7 +21,7 @@ fn main() {
 fn handle_connection(mut stream: TcpStream) {
     let mut buffer = [0; 512];
     stream.read(&mut buffer).unwrap();
-    // println!("request {}", String::from_utf8_lossy(&buffer));
+    println!("request {}", String::from_utf8_lossy(&buffer));
 
     let get = b"GET / HTTP/1.1\r\n";
     let sleep = b"GET /sleep HTTP/1.1\r\n";
