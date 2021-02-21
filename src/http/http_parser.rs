@@ -1,15 +1,8 @@
+use super::HttpRequest;
+
 pub struct HttpParser {
     input: String,
     index: usize,
-}
-
-#[derive(Debug)]
-pub struct HttpRequest {
-    pub method: String,
-    pub version: String,
-    pub headers: Vec<(String, String)>,
-    pub uri: String,
-    pub body: String
 }
 
 impl HttpParser {
