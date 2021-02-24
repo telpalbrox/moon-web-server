@@ -72,6 +72,7 @@ impl Worker {
 
             match message {
                 Message::NewJob(job) => {
+                    #[cfg(debug_assertions)]
                     println!("Worker {} got a job; executing.", id);
 
                     job();

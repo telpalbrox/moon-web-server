@@ -3,10 +3,11 @@ use std::net::TcpListener;
 use super::super::thread_pool::ThreadPool;
 use super::HttpParser;
 use std::sync::Arc;
+use super::HttpResponse;
 
 use super::HttpRequest;
 
-type RouteHandler = dyn Fn(HttpRequest) -> String + Send + Sync;
+type RouteHandler = dyn Fn(HttpRequest, HttpResponse) -> HttpResponse + Send + Sync;
 
 pub struct Route {
     pub method: String,
@@ -60,9 +61,9 @@ impl HttpServer {
                 };
 
                 let handler = &route.handler;
-                let result = handler(request);
+                let result = handler(request, HttpResponse::new());
 
-                let response = format!("HTTP/1.1 200 OK\r\n\r\n{}", result);
+                let response = result.to_string();
                 stream.write(response.as_bytes()).unwrap();
                 stream.flush().unwrap();
             });

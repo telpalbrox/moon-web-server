@@ -8,8 +8,10 @@ fn main() {
     server.add_route(Route {
         method: String::from("GET"),
         uri: String::from("/"),
-        handler: Arc::new(|request| {
-            String::from(format!("lol request to {}", request.uri))
+        handler: Arc::new(|request, mut response| {
+            response.add_header("x-test".to_owned(), "more test".to_owned());
+            response.set_body(format!("lol request to {}", request.uri));
+            response
         })
     });
 
