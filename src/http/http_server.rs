@@ -111,3 +111,49 @@ impl HttpServer {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use super::super::http_request::HttpRequest;
+
+    #[test]
+    fn basic_route_match() {
+        let route = Route {
+            method: String::from("GET"),
+            uri: String::from("/test"),
+            handler: Arc::new(|_, response| {
+                response
+            })
+        };
+        assert_eq!(route.matches_uri(&"/test".to_owned()), true);
+    }
+
+    #[test]
+    fn route_with_parameter_match() {
+        let route = Route {
+            method: String::from("GET"),
+            uri: String::from("/test/:test_param"),
+            handler: Arc::new(|_, response| {
+                response
+            })
+        };
+        assert_eq!(route.matches_uri(&"/test".to_owned()), false);
+        assert_eq!(route.matches_uri(&"/test/test".to_owned()), true);
+    }
+
+    #[test]
+    fn get_params_from_route() {
+        let route = Route {
+            method: String::from("GET"),
+            uri: String::from("/test/:test_param"),
+            handler: Arc::new(|_, response| {
+                response
+            })
+        };
+        let mut request = HttpRequest::new_with_uri("/test/some_param".to_owned());
+        route.add_params(&mut request);
+        assert_eq!(request.params.get("test_param").is_some(), true);
+        assert_eq!(request.params.get("test_param").unwrap(), "some_param");
+    }
+}
