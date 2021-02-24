@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use super::HttpHeaders;
+use std::collections::HashMap;
 
 #[derive(Debug)]
 pub struct HttpRequest {
@@ -8,7 +8,8 @@ pub struct HttpRequest {
     pub headers: HttpHeaders,
     pub uri: String,
     pub body: String,
-    pub params: HashMap<String, String>
+    pub params: HashMap<String, String>,
+    pub query: HashMap<String, String>,
 }
 
 #[cfg(test)]
@@ -20,7 +21,8 @@ impl HttpRequest {
             headers: Vec::new(),
             version: "1.1".to_owned(),
             body: String::new(),
-            params: HashMap::new()
+            params: HashMap::new(),
+            query: HashMap::new(),
         }
     }
 }

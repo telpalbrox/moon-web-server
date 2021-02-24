@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use super::HttpRequest;
+use std::collections::HashMap;
 
 pub struct HttpParser {
     input: String,
@@ -8,16 +8,21 @@ pub struct HttpParser {
 
 impl HttpParser {
     pub fn new(input: String) -> HttpParser {
-        HttpParser {
-            index: 0,
-            input
-        }
+        HttpParser { index: 0, input }
     }
 
     fn expect_char(&self, ch: char) {
         match self.input.chars().nth(self.index) {
-            Some(input_ch) => assert_eq!(input_ch, ch, "HttpParser: Expected char {:?}, got {:?}", ch, input_ch),
-            None => panic!("HttpParser: Expected char at index '{}' but input lenght is '{}'", self.index, self.input.len())
+            Some(input_ch) => assert_eq!(
+                input_ch, ch,
+                "HttpParser: Expected char {:?}, got {:?}",
+                ch, input_ch
+            ),
+            None => panic!(
+                "HttpParser: Expected char at index '{}' but input lenght is '{}'",
+                self.index,
+                self.input.len()
+            ),
         }
     }
 
@@ -37,14 +42,18 @@ impl HttpParser {
             Some(input_ch) => {
                 self.index = self.index + 1;
                 input_ch
-            },
-            None => panic!("HttpParser: Expected char at index '{}' but input lenght is '{}'", self.index, self.input.len())
+            }
+            None => panic!(
+                "HttpParser: Expected char at index '{}' but input lenght is '{}'",
+                self.index,
+                self.input.len()
+            ),
         }
     }
 
     fn peek_index(&self, index: usize) -> char {
         if index >= self.input.len() {
-            return '\0'
+            return '\0';
         }
         self.input.chars().nth(index).unwrap()
     }
@@ -128,6 +137,35 @@ impl HttpParser {
         headers
     }
 
+    fn parse_query_params(uri: &String) -> HashMap<String, String> {
+        let mut query_params = HashMap::new();
+
+        let uri_without_fragment: String = uri.split('#').take(1).collect();
+        let uri_parts: Vec<&str> = uri_without_fragment.split('?').take(2).collect();
+        let query = match uri_parts.get(1) {
+            Some(query) => query,
+            None => return query_params,
+        };
+
+        for query_param in query.split('&') {
+            let param_parts: Vec<&str> = query_param.split('=').collect();
+            let query_key = match param_parts.get(0) {
+                Some(key) => key,
+                None => continue,
+            };
+            let query_value = match param_parts.get(1) {
+                Some(value) => value,
+                None => continue,
+            };
+            query_params.insert(
+                query_key.to_owned().to_owned(),
+                query_value.to_owned().to_owned(),
+            );
+        }
+
+        query_params
+    }
+
     pub fn parse(&mut self) -> HttpRequest {
         let method = self.parse_string();
         self.consume_whitespace();
@@ -144,10 +182,11 @@ impl HttpParser {
         HttpRequest {
             method,
             headers,
+            query: HttpParser::parse_query_params(&uri),
             uri,
             version,
             body,
-            params: HashMap::new()
+            params: HashMap::new(),
         }
     }
 }
@@ -159,6 +198,10 @@ mod tests {
     const BASIC_REQUEST: &str = "GET /test HTTP/1.1\r\nUserAgent: test rust\r\n\r\n";
     const POST_REQUEST: &str = "POST / HTTP/1.1\r\nUserAgent: test\r\n\r\ntest rust2";
     const FIREFOX_REQUEST: &str = "GET / HTTP/1.1\r\nHost: localhost:7878\r\nUser-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:85.0) Gecko/20100101 Firefox/85.0\r\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8\r\nAccept-Language: en-US,es;q=0.8,ru;q=0.5,en;q=0.3\r\nAccept-Encoding: gzip, deflate\r\nConnection: keep-alive\r\nUpgrade-Insecure-Requests: 1\r\n\r\n";
+    const QUERY_REQUEST: &str =
+        "GET /test?query=1&query2=2 HTTP/1.1\r\nUserAgent: test rust\r\n\r\n";
+    const SINGLE_QUERY_REQUEST: &str = "GET /test?query=1 HTTP/1.1\r\nUserAgent: test rust\r\n\r\n";
+    const EMPTY_QUERY_REQUEST: &str = "GET /test?query= HTTP/1.1\r\nUserAgent: test rust\r\n\r\n";
 
     #[test]
     fn parse_basic_request() {
@@ -184,5 +227,24 @@ mod tests {
         let mut parser = HttpParser::new(FIREFOX_REQUEST.to_owned());
         let request = parser.parse();
         assert_eq!(request.headers.len(), 7);
+    }
+
+    #[test]
+    fn parse_query_params() {
+        let mut parser = HttpParser::new(SINGLE_QUERY_REQUEST.to_owned());
+        let request = parser.parse();
+        assert_eq!(request.query.len(), 1);
+        assert_eq!(request.query.get("query"), Some(&String::from("1")));
+        assert_eq!(request.query.get("query2"), None);
+        let mut parser = HttpParser::new(QUERY_REQUEST.to_owned());
+        let request = parser.parse();
+        assert_eq!(request.query.len(), 2);
+        assert_eq!(request.query.get("query"), Some(&String::from("1")));
+        assert_eq!(request.query.get("query2"), Some(&String::from("2")));
+        let mut parser = HttpParser::new(EMPTY_QUERY_REQUEST.to_owned());
+        let request = parser.parse();
+        assert_eq!(request.query.len(), 1);
+        assert_eq!(request.query.get("query"), Some(&String::from("")));
+        assert_eq!(request.query.get("query2"), None);
     }
 }

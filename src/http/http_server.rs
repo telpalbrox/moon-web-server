@@ -1,9 +1,9 @@
-use std::io::prelude::*;
-use std::net::TcpListener;
 use super::super::thread_pool::ThreadPool;
 use super::HttpParser;
-use std::sync::Arc;
 use super::HttpResponse;
+use std::io::prelude::*;
+use std::net::TcpListener;
+use std::sync::Arc;
 
 use super::HttpRequest;
 
@@ -12,19 +12,21 @@ type RouteHandler = dyn Fn(HttpRequest, HttpResponse) -> HttpResponse + Send + S
 pub struct Route {
     pub method: String,
     pub uri: String,
-    pub handler: Arc<RouteHandler>
+    pub handler: Arc<RouteHandler>,
 }
 
 impl Route {
     pub fn matches_uri(&self, uri: &String) -> bool {
+        // remove query part of the url
+        let uri: String = uri.split('?').take(1).collect();
         if !self.uri.contains(':') {
-            return &self.uri == uri
+            return self.uri == uri;
         }
 
         let colon_position = self.uri.find(':').unwrap();
         let route_before_color = self.uri.get(..colon_position).unwrap();
         if !uri.starts_with(route_before_color) {
-            return false
+            return false;
         }
         uri.get(colon_position + 1..).is_some()
     }
@@ -33,31 +35,33 @@ impl Route {
         let colon_position = match self.uri.find(':') {
             None => {
                 return;
-            },
-            Some(position) => position
+            }
+            Some(position) => position,
         };
 
         let route_before_color = self.uri.get(..colon_position).unwrap();
         if !request.uri.starts_with(route_before_color) {
-            return
+            return;
         }
         let param_key = self.uri.get(colon_position + 1..).unwrap();
         let param_value = match request.uri.get(colon_position..) {
             None => return,
-            Some(value) => value
+            Some(value) => value,
         };
-        request.params.insert(param_key.to_owned(), param_value.to_owned());
+        request
+            .params
+            .insert(param_key.to_owned(), param_value.to_owned());
     }
 }
 
 pub struct HttpServer {
-    routes: Arc<Vec<Route>>
+    routes: Arc<Vec<Route>>,
 }
 
 impl HttpServer {
     pub fn new() -> HttpServer {
         HttpServer {
-            routes: Arc::new(Vec::new())
+            routes: Arc::new(Vec::new()),
         }
     }
 
@@ -68,18 +72,18 @@ impl HttpServer {
     pub fn start(&self) {
         let listener = TcpListener::bind("127.0.0.1:7878").unwrap();
         let pool = ThreadPool::new(4);
-    
+
         for stream in listener.incoming() {
             let mut stream = stream.unwrap();
             let routes = Arc::clone(&self.routes);
-    
+
             pool.execute(move || {
                 routes.len();
                 let mut buffer = [0; 8192];
                 stream.read(&mut buffer).unwrap();
                 let raw_request = String::from_utf8_lossy(&buffer);
                 // println!("raw_request: {:?}", raw_request);
-            
+
                 let mut request = HttpParser::new(raw_request.as_ref().to_owned()).parse();
 
                 let mut found_route = None;
@@ -95,7 +99,7 @@ impl HttpServer {
                         let handler = &route.handler;
                         route.add_params(&mut request);
                         handler(request, HttpResponse::new())
-                    },
+                    }
                     None => {
                         let mut result = HttpResponse::new();
                         result.set_status_code(404);
@@ -114,19 +118,17 @@ impl HttpServer {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::http_request::HttpRequest;
+    use super::*;
 
     #[test]
     fn basic_route_match() {
         let route = Route {
             method: String::from("GET"),
             uri: String::from("/test"),
-            handler: Arc::new(|_, response| {
-                response
-            })
+            handler: Arc::new(|_, response| response),
         };
-        assert_eq!(route.matches_uri(&"/test".to_owned()), true);
+        assert_eq!(route.matches_uri(&"/test?query=1".to_owned()), true);
     }
 
     #[test]
@@ -134,9 +136,7 @@ mod tests {
         let route = Route {
             method: String::from("GET"),
             uri: String::from("/test/:test_param"),
-            handler: Arc::new(|_, response| {
-                response
-            })
+            handler: Arc::new(|_, response| response),
         };
         assert_eq!(route.matches_uri(&"/test".to_owned()), false);
         assert_eq!(route.matches_uri(&"/test/test".to_owned()), true);
@@ -147,9 +147,7 @@ mod tests {
         let route = Route {
             method: String::from("GET"),
             uri: String::from("/test/:test_param"),
-            handler: Arc::new(|_, response| {
-                response
-            })
+            handler: Arc::new(|_, response| response),
         };
         let mut request = HttpRequest::new_with_uri("/test/some_param".to_owned());
         route.add_params(&mut request);

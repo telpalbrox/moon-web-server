@@ -1,11 +1,11 @@
-use std::collections::HashMap;
 use super::HttpHeaders;
+use std::collections::HashMap;
 
 #[derive(Debug)]
 pub struct HttpResponse {
     headers: HttpHeaders,
     status_code: u16,
-    body: String
+    body: String,
 }
 
 const HTTP_VERSION: &str = "HTTP/1.1";
@@ -16,16 +16,18 @@ impl HttpResponse {
             (200, "Ok"),
             (400, "Bad request"),
             (404, "Not found"),
-            (500, "Internal server error")
+            (500, "Internal server error"),
         ]
-        .iter().cloned().collect()
+        .iter()
+        .cloned()
+        .collect()
     }
 
     pub fn new() -> Self {
         HttpResponse {
             headers: Vec::new(),
             status_code: 200,
-            body: String::new()
+            body: String::new(),
         }
     }
 
@@ -59,7 +61,9 @@ impl HttpResponse {
 
     fn get_status_line(&self) -> String {
         let reasons = HttpResponse::http_reasons();
-        let reason_phrase = reasons.get(&self.status_code()).unwrap_or(&"Something happened");
+        let reason_phrase = reasons
+            .get(&self.status_code())
+            .unwrap_or(&"Something happened");
         format!("{} {} {}", HTTP_VERSION, self.status_code(), reason_phrase)
     }
 
@@ -95,6 +99,9 @@ mod tests {
         let mut response = HttpResponse::new();
         response.add_header("x-test".to_owned(), "more test".to_owned());
         response.set_body("test body".to_owned());
-        assert_eq!(response.to_string(), "HTTP/1.1 200 Ok\r\nx-test:more test\r\n\r\ntest body")
+        assert_eq!(
+            response.to_string(),
+            "HTTP/1.1 200 Ok\r\nx-test:more test\r\n\r\ntest body"
+        )
     }
 }
