@@ -15,5 +15,14 @@ fn main() {
         })
     });
 
+    server.add_route(Route {
+        method: String::from("GET"),
+        uri: String::from("/id/:id"),
+        handler: Arc::new(|request, mut response| {
+            response.set_body(format!("url id: {}", request.params.get("id").unwrap()));
+            response
+        })
+    });
+
     server.start();
 }

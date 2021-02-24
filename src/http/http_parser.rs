@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use super::HttpRequest;
 
 pub struct HttpParser {
@@ -145,7 +146,8 @@ impl HttpParser {
             headers,
             uri,
             version,
-            body
+            body,
+            params: HashMap::new()
         }
     }
 }
