@@ -1,6 +1,7 @@
 use std::sync::Arc;
 use webserver::http::http_server::Route;
 use webserver::http::HttpServer;
+use webserver::http::{HttpRequest, HttpResponse};
 
 fn main() {
     let mut server = HttpServer::new();
@@ -15,19 +16,17 @@ fn main() {
         }),
     });
 
-    server.add_route(Route {
-        method: String::from("GET"),
-        uri: String::from("/id/:id"),
-        handler: Arc::new(|request, mut response| {
+    server.get(
+        "/id/:id",
+        &|request: HttpRequest, mut response: HttpResponse| {
             response.set_body(format!("url id: {}", request.params.get("id").unwrap()));
             response
-        }),
-    });
+        },
+    );
 
-    server.add_route(Route {
-        method: String::from("GET"),
-        uri: String::from("/query"),
-        handler: Arc::new(|request, mut response| {
+    server.get(
+        "/query",
+        &|request: HttpRequest, mut response: HttpResponse| {
             response.set_body(format!(
                 "query param key: {}",
                 request
@@ -36,8 +35,8 @@ fn main() {
                     .unwrap_or(&String::from("not present"))
             ));
             response
-        }),
-    });
+        },
+    );
 
     server.start();
 }

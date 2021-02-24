@@ -1,6 +1,7 @@
 use super::super::thread_pool::ThreadPool;
 use super::HttpParser;
 use super::HttpResponse;
+use std::env;
 use std::io::prelude::*;
 use std::net::TcpListener;
 use std::sync::Arc;
@@ -69,8 +70,21 @@ impl HttpServer {
         Arc::get_mut(&mut self.routes).unwrap().push(route);
     }
 
+    pub fn get(&mut self, uri: &str, handler: &'static RouteHandler) {
+        let route = Route {
+            uri: uri.to_owned(),
+            method: "GET".to_owned(),
+            handler: Arc::new(handler),
+        };
+        Arc::get_mut(&mut self.routes).unwrap().push(route);
+    }
+
     pub fn start(&self) {
-        let listener = TcpListener::bind("127.0.0.1:7878").unwrap();
+        let port = match env::var("PORT") {
+            Ok(port) => port,
+            Err(_) => "7878".to_owned()
+        };
+        let listener = TcpListener::bind(format!("127.0.0.1:{}", port)).unwrap();
         let pool = ThreadPool::new(4);
 
         for stream in listener.incoming() {
