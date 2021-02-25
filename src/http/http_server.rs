@@ -82,7 +82,7 @@ impl HttpServer {
     pub fn start(&self) {
         let port = match env::var("PORT") {
             Ok(port) => port,
-            Err(_) => "7878".to_owned()
+            Err(_) => "7878".to_owned(),
         };
         let listener = TcpListener::bind(format!("127.0.0.1:{}", port)).unwrap();
         let pool = ThreadPool::new(4);

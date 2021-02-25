@@ -1,7 +1,13 @@
+use std::fs;
 use std::sync::Arc;
 use webserver::http::http_server::Route;
 use webserver::http::HttpServer;
 use webserver::http::{HttpRequest, HttpResponse};
+use webserver::templating::render;
+
+fn read_file(path: &'static str) -> String {
+    fs::read_to_string(path).unwrap()
+}
 
 fn main() {
     let mut server = HttpServer::new();
@@ -33,6 +39,20 @@ fn main() {
                     .query
                     .get("key")
                     .unwrap_or(&String::from("not present"))
+            ));
+            response
+        },
+    );
+
+    server.get(
+        "/hello",
+        &|request: HttpRequest, mut response: HttpResponse| {
+            response
+                .headers_mut()
+                .push(("Content-Type".to_owned(), "text/html".to_owned()));
+            response.set_body(render(
+                read_file("./src/templates/hello.html").to_owned(),
+                &request.query,
             ));
             response
         },
