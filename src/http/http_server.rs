@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 use super::HttpRequest;
 
-type RouteHandler = dyn Fn(HttpRequest, HttpResponse) -> HttpResponse + Send + Sync;
+type RouteHandler = dyn Fn(HttpRequest, &mut HttpResponse) ->() + Send + Sync;
 
 pub struct Route {
     pub method: String,
@@ -108,11 +108,14 @@ impl HttpServer {
                     }
                 }
 
-                let result = match found_route {
+                let result: HttpResponse;
+                result = match found_route {
                     Some(route) => {
                         let handler = &route.handler;
                         route.add_params(&mut request);
-                        handler(request, HttpResponse::new())
+                        let mut response = HttpResponse::new();
+                        handler(request, &mut response);
+                        response
                     }
                     None => {
                         let mut result = HttpResponse::new();
@@ -140,7 +143,7 @@ mod tests {
         let route = Route {
             method: String::from("GET"),
             uri: String::from("/test"),
-            handler: Arc::new(|_, response| response),
+            handler: Arc::new(|_, _| ()),
         };
         assert_eq!(route.matches_uri(&"/test?query=1".to_owned()), true);
     }
@@ -150,7 +153,7 @@ mod tests {
         let route = Route {
             method: String::from("GET"),
             uri: String::from("/test/:test_param"),
-            handler: Arc::new(|_, response| response),
+            handler: Arc::new(|_, _| ()),
         };
         assert_eq!(route.matches_uri(&"/test".to_owned()), false);
         assert_eq!(route.matches_uri(&"/test/test".to_owned()), true);
@@ -161,7 +164,7 @@ mod tests {
         let route = Route {
             method: String::from("GET"),
             uri: String::from("/test/:test_param"),
-            handler: Arc::new(|_, response| response),
+            handler: Arc::new(|_, _| ()),
         };
         let mut request = HttpRequest::new_with_uri("/test/some_param".to_owned());
         route.add_params(&mut request);
