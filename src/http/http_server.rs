@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 use super::HttpRequest;
 
-type RouteHandler = dyn Fn(HttpRequest, &mut HttpResponse) ->() + Send + Sync;
+type RouteHandler = dyn Fn(HttpRequest, &mut HttpResponse) -> () + Send + Sync;
 
 pub struct Route {
     pub method: String,
