@@ -9,10 +9,19 @@ struct MustacheLikeLexer {
     tokens: Vec<MustacheLikeToken>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 enum MustacheLikeToken {
     Text(String),
     Name(String),
+    OpenTag(String),
+    CloseTag(String)
+}
+
+#[derive(Debug, PartialEq)]
+enum MustacheLikeNode {
+    Text(String),
+    Variable(String),
+    Section(String, Vec<Box<MustacheLikeNode>>)
 }
 
 impl MustacheLikeLexer {
@@ -141,34 +150,178 @@ impl MustacheLikeLexer {
 
             let text_inside_tag = self.consume_until(CLOSE_TAG).trim().to_owned();
             self.consume_specific_string(CLOSE_TAG);
-            self.tokens.push(MustacheLikeToken::Name(text_inside_tag));
+            let first_char = match text_inside_tag.chars().nth(0) {
+                Some(char) => char,
+                None => panic!("First char not found")
+            };
+            if first_char == '#' {
+                let tag_name = text_inside_tag.chars().skip(1).collect();
+                self.tokens.push(MustacheLikeToken::OpenTag(tag_name));
+            } else if first_char == '/' {
+                let tag_name = text_inside_tag.chars().skip(1).collect();
+                self.tokens.push(MustacheLikeToken::CloseTag(tag_name));
+            } else {
+                self.tokens.push(MustacheLikeToken::Name(text_inside_tag));
+            }
         }
 
         self.tokens
     }
 }
 
-impl MustacheLikeToken {
-    fn render(&self, context: &HashMap<String, String>) -> String {
+#[derive(Debug, PartialEq)]
+pub enum MustacheLikeValue {
+    String(String),
+    Boolean(bool),
+    Number(f64),
+    Array(Vec<Box<MustacheLikeValue>>),
+    Map(HashMap<String, Box<MustacheLikeValue>>)
+}
+
+impl MustacheLikeNode {
+    fn render_section(nodes: &Vec<Box<MustacheLikeNode>>, context: &HashMap<String, MustacheLikeValue>) -> String {
+        let mut result = String::new();
+
+        for node in nodes {
+            result.push_str(&node.render(context));
+        }
+
+        result
+    }
+
+    fn render(&self, context: &HashMap<String, MustacheLikeValue>) -> String {
         match self {
             Self::Text(text) => {
                 return String::from(text);
             }
-            Self::Name(name) => {
+            Self::Variable(name) => {
                 if let Some(value) = context.get(name) {
-                    return String::from(value);
+                    match value {
+                        MustacheLikeValue::String(value) => return String::from(value),
+                        MustacheLikeValue::Boolean(value) => return value.to_string(),
+                        MustacheLikeValue::Number(value) => return value.to_string(),
+                        _ => return String::from("")
+                    }
                 }
                 return String::from("");
+            },
+            Self::Section(tag_name, nodes) => {
+                let value = match context.get(tag_name) {
+                    None => return String::from(""),
+                    Some(value) => value
+                };
+
+                match value {
+                    MustacheLikeValue::Boolean(value) => {
+                        if !value {
+                            return String::from("");
+                        }
+                        return MustacheLikeNode::render_section(nodes, context);
+                    }
+                    _ => return String::from("")
+                }
             }
         };
     }
 }
 
-pub fn render(input: String, context: &HashMap<String, String>) -> String {
+struct MustacheLikeParser {
+    tokens: Vec<MustacheLikeToken>,
+    index: usize
+}
+
+impl MustacheLikeParser {
+    fn new(tokens: Vec<MustacheLikeToken>) -> Self {
+        Self {
+            tokens,
+            index: 0
+        }
+    }
+
+    fn has_finished(&self) -> bool {
+        self.index >= self.tokens.len()
+    }
+
+    fn consume(&mut self) {
+        self.index = self.index + 1;
+    }
+
+    fn consume_until(&mut self, token: &MustacheLikeToken) -> Vec<MustacheLikeToken> {
+        let mut tokens = Vec::new();
+        loop {
+            let peeked_token = match self.tokens.get(self.index) {
+                None => break,
+                Some(token) => token
+            };
+            if peeked_token == token {
+                break;
+            }
+            tokens.push(peeked_token.to_owned());
+            self.consume();
+        }
+        tokens
+    }
+
+    fn consume_specific(&mut self, token: &MustacheLikeToken) {
+        let peeked_token = match self.tokens.get(self.index) {
+            None => {
+                panic!("Expected token {:?} at index {}, but list of tokens has size {}", token, self.index, self.tokens.len())
+            },
+            Some(token) => token
+        };
+        if peeked_token != token {
+            panic!("Expected token {:?} but found {:?}", token, peeked_token);
+        }
+        self.consume();
+    }
+
+    fn parse(&mut self) -> Vec<Box<MustacheLikeNode>> {
+        let mut nodes: Vec<Box<MustacheLikeNode>> = Vec::new();
+
+        loop {
+            if self.has_finished() {
+                break;
+            }
+
+            let token = match self.tokens.get(self.index) {
+                Some(token) => token,
+                None => break
+            };
+
+            match token {
+                MustacheLikeToken::Text(text) => {
+                    nodes.push(Box::new(MustacheLikeNode::Text(text.to_owned())));
+                    self.consume();
+                },
+                MustacheLikeToken::Name(name) => {
+                    nodes.push(Box::new(MustacheLikeNode::Variable(name.to_owned())));
+                    self.consume();
+                },
+                MustacheLikeToken::OpenTag(tag_name) => {
+                    let close_tag_token = MustacheLikeToken::CloseTag(tag_name.to_owned());
+                    let tag_name = tag_name.clone();
+                    self.consume();
+                    let section_tokens = self.consume_until(&close_tag_token);
+                    self.consume_specific(&close_tag_token);
+                    let section_nodes = MustacheLikeParser::new(section_tokens).parse();
+                    nodes.push(Box::new(MustacheLikeNode::Section(tag_name.to_owned(), section_nodes)));
+                },
+                MustacheLikeToken::CloseTag(tag_name) => {
+                    panic!("Not expected close tag {:?}", tag_name);
+                } 
+            }
+        }
+
+        nodes
+    }
+}
+
+pub fn render(input: String, context: &HashMap<String, MustacheLikeValue>) -> String {
     let tokens = MustacheLikeLexer::new(input).run();
+    let nodes = MustacheLikeParser::new(tokens).parse();
     let mut result = String::new();
-    for token in tokens {
-        result.push_str(&token.render(&context));
+    for node in nodes {
+        result.push_str(&node.render(&context));
     }
     result
 }
@@ -198,12 +351,78 @@ mod tests {
     }
 
     #[test]
+    fn lexer_tags() {
+        let lexer = MustacheLikeLexer::new("Shown.\n{{#person}}\n  Never shown!\n{{/person}}".to_owned());
+        assert_eq!(
+            lexer.run(),
+            vec!(
+                MustacheLikeToken::Text(String::from("Shown.\n")),
+                MustacheLikeToken::OpenTag(String::from("person")),
+                MustacheLikeToken::Text(String::from("\n  Never shown!\n")),
+                MustacheLikeToken::CloseTag(String::from("person")),
+            )
+        )
+    }
+
+    fn expect_nodes(nodes: Vec<Box<MustacheLikeNode>>, expected_nodes: Vec<MustacheLikeNode>) {
+        for index in 0..nodes.len() {
+            let node = &*nodes[index];
+            assert_eq!(node, &expected_nodes[index])
+        }
+    }
+
+    #[test]
+    fn parser() {
+        let tokens = vec!(
+            MustacheLikeToken::Text(String::from("Input ")),
+            MustacheLikeToken::Name(String::from("test")),
+            MustacheLikeToken::Text(String::from(" more text"))
+        );
+        let mut parser = MustacheLikeParser::new(tokens);
+        let nodes = parser.parse();
+        let expected_nodes = vec!(
+            MustacheLikeNode::Text(String::from("Input ")),
+            MustacheLikeNode::Variable(String::from("test")),
+            MustacheLikeNode::Text(String::from(" more text")),
+        );
+        expect_nodes(nodes, expected_nodes);
+    }
+
+    #[test]
+    fn parser_tree() {
+        let tokens = vec!(
+            MustacheLikeToken::Text(String::from("Shown.\n")),
+            MustacheLikeToken::OpenTag(String::from("person")),
+            MustacheLikeToken::Text(String::from("\n  Never shown!\n")),
+            MustacheLikeToken::CloseTag(String::from("person")),
+        );
+        let nodes = MustacheLikeParser::new(tokens).parse();
+        expect_nodes(nodes, vec!(
+            MustacheLikeNode::Text(String::from("Shown.\n")),
+            MustacheLikeNode::Section(String::from("person"), vec!(
+                Box::new(MustacheLikeNode::Text(String::from("\n  Never shown!\n")))
+            ))
+        ));
+    }
+
+    #[test]
     fn render_test() {
         let mut context = HashMap::new();
-        context.insert("test".to_owned(), "value test".to_owned());
+        context.insert("test".to_owned(), MustacheLikeValue::String("value test".to_owned()));
         assert_eq!(
             render("Input {{test}} more text".to_owned(), &context),
             "Input value test more text"
+        );
+    }
+
+    #[test]
+    fn render_array() {
+        let mut context = HashMap::new();
+        context.insert("person".to_owned(), MustacheLikeValue::Boolean(true));
+
+        assert_eq!(
+            render("Shown.\n{{#person}}\n  Never shown!\n{{/person}}".to_owned(), &context),
+            "Shown.\n\n  Never shown!\n"
         );
     }
 }

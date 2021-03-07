@@ -1,9 +1,10 @@
 use std::fs;
 use std::sync::Arc;
+use std::collections::HashMap;
 use webserver::http::http_server::Route;
 use webserver::http::HttpServer;
 use webserver::http::{HttpRequest, HttpResponse};
-use webserver::templating::render;
+use webserver::templating::{render, MustacheLikeValue};
 
 fn read_file(path: &'static str) -> String {
     fs::read_to_string(path).unwrap()
@@ -47,9 +48,15 @@ fn main() {
             response
                 .headers_mut()
                 .push(("Content-Type".to_owned(), "text/html".to_owned()));
+            let mut context: HashMap<String, MustacheLikeValue> = HashMap::new();
+            let name = request.query.get("name").unwrap_or(&String::from("")).to_owned();
+            if name == "victoria" {
+                context.insert(String::from("beloved"), MustacheLikeValue::Boolean(true));
+            }
+            context.insert("name".to_owned(), MustacheLikeValue::String(name));
             response.set_body(render(
                 read_file("./src/templates/hello.html").to_owned(),
-                &request.query,
+                &context,
             ));
         },
     );
