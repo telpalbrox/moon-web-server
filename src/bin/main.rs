@@ -4,7 +4,8 @@ use std::sync::Arc;
 use webserver::http::http_server::Route;
 use webserver::http::HttpServer;
 use webserver::http::{HttpRequest, HttpResponse};
-use webserver::templating::{render, MustacheLikeValue};
+use webserver::json::JsonValue;
+use webserver::templating::render;
 
 fn read_file(path: &'static str) -> String {
     fs::read_to_string(path).unwrap()
@@ -55,12 +56,12 @@ fn main() {
                 .unwrap_or(&String::from(""))
                 .to_owned();
             if name == "victoria" {
-                context.insert(String::from("beloved"), MustacheLikeValue::Boolean(true));
+                context.insert(String::from("beloved"), JsonValue::Boolean(true));
             }
-            context.insert("name".to_owned(), MustacheLikeValue::String(name));
+            context.insert("name".to_owned(), JsonValue::String(name));
             response.set_body(render(
                 read_file("./src/templates/hello.html").to_owned(),
-                &MustacheLikeValue::Map(context),
+                &JsonValue::Object(context),
             ));
         },
     );
@@ -76,17 +77,14 @@ fn main() {
             let mut headers = vec![];
             for (key, value) in request.headers {
                 let mut header = HashMap::new();
-                header.insert("key".to_owned(), MustacheLikeValue::String(key.to_owned()));
-                header.insert(
-                    "value".to_owned(),
-                    MustacheLikeValue::String(value.to_owned()),
-                );
-                headers.push(MustacheLikeValue::Map(header));
+                header.insert("key".to_owned(), JsonValue::String(key.to_owned()));
+                header.insert("value".to_owned(), JsonValue::String(value.to_owned()));
+                headers.push(JsonValue::Object(header));
             }
-            context.insert("headers".to_owned(), MustacheLikeValue::Array(headers));
+            context.insert("headers".to_owned(), JsonValue::Array(headers));
             response.set_body(render(
                 read_file("./src/templates/headers.html").to_owned(),
-                &MustacheLikeValue::Map(context),
+                &JsonValue::Object(context),
             ));
         },
     );
