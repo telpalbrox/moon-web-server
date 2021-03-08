@@ -50,8 +50,8 @@ impl MustacheLikeParser {
         self.consume();
     }
 
-    pub fn parse(&mut self) -> Vec<Box<MustacheLikeNode>> {
-        let mut nodes: Vec<Box<MustacheLikeNode>> = Vec::new();
+    pub fn parse(&mut self) -> Vec<MustacheLikeNode> {
+        let mut nodes: Vec<MustacheLikeNode> = Vec::new();
 
         loop {
             if self.has_finished() {
@@ -65,11 +65,11 @@ impl MustacheLikeParser {
 
             match token {
                 MustacheLikeToken::Text(text) => {
-                    nodes.push(Box::new(MustacheLikeNode::Text(text.to_owned())));
+                    nodes.push(MustacheLikeNode::Text(text.to_owned()));
                     self.consume();
                 }
                 MustacheLikeToken::Name(name) => {
-                    nodes.push(Box::new(MustacheLikeNode::Variable(name.to_owned())));
+                    nodes.push(MustacheLikeNode::Variable(name.to_owned()));
                     self.consume();
                 }
                 MustacheLikeToken::OpenTag(tag_name) => {
@@ -79,10 +79,10 @@ impl MustacheLikeParser {
                     let section_tokens = self.consume_until(&close_tag_token);
                     self.consume_specific(&close_tag_token);
                     let section_nodes = MustacheLikeParser::new(section_tokens).parse();
-                    nodes.push(Box::new(MustacheLikeNode::Section(
+                    nodes.push(MustacheLikeNode::Section(
                         tag_name.to_owned(),
                         section_nodes,
-                    )));
+                    ));
                 }
                 MustacheLikeToken::CloseTag(tag_name) => {
                     panic!("Not expected close tag {:?}", tag_name);
@@ -98,13 +98,6 @@ impl MustacheLikeParser {
 mod tests {
     use super::*;
 
-    fn expect_nodes(nodes: Vec<Box<MustacheLikeNode>>, expected_nodes: Vec<MustacheLikeNode>) {
-        for index in 0..nodes.len() {
-            let node = &*nodes[index];
-            assert_eq!(node, &expected_nodes[index])
-        }
-    }
-
     #[test]
     fn parser() {
         let tokens = vec![
@@ -119,7 +112,7 @@ mod tests {
             MustacheLikeNode::Variable(String::from("test")),
             MustacheLikeNode::Text(String::from(" more text")),
         ];
-        expect_nodes(nodes, expected_nodes);
+        assert_eq!(nodes, expected_nodes);
     }
 
     #[test]
@@ -131,15 +124,13 @@ mod tests {
             MustacheLikeToken::CloseTag(String::from("person")),
         ];
         let nodes = MustacheLikeParser::new(tokens).parse();
-        expect_nodes(
+        assert_eq!(
             nodes,
             vec![
                 MustacheLikeNode::Text(String::from("Shown.\n")),
                 MustacheLikeNode::Section(
                     String::from("person"),
-                    vec![Box::new(MustacheLikeNode::Text(String::from(
-                        "\n  Never shown!\n",
-                    )))],
+                    vec![MustacheLikeNode::Text(String::from("\n  Never shown!\n",))],
                 ),
             ],
         );

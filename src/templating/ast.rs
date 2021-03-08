@@ -5,22 +5,19 @@ pub enum MustacheLikeValue {
     String(String),
     Boolean(bool),
     Number(f64),
-    Array(Vec<Box<MustacheLikeValue>>),
-    Map(HashMap<String, Box<MustacheLikeValue>>),
+    Array(Vec<MustacheLikeValue>),
+    Map(HashMap<String, MustacheLikeValue>),
 }
 
 #[derive(Debug, PartialEq)]
 pub enum MustacheLikeNode {
     Text(String),
     Variable(String),
-    Section(String, Vec<Box<MustacheLikeNode>>),
+    Section(String, Vec<MustacheLikeNode>),
 }
 
 impl MustacheLikeNode {
-    pub fn render_section(
-        nodes: &Vec<Box<MustacheLikeNode>>,
-        context: &MustacheLikeValue,
-    ) -> String {
+    pub fn render_section(nodes: &Vec<MustacheLikeNode>, context: &MustacheLikeValue) -> String {
         let mut result = String::new();
 
         for node in nodes {
@@ -42,7 +39,7 @@ impl MustacheLikeNode {
                             None => return String::from(""),
                             Some(value) => value,
                         };
-                        match &**value {
+                        match value {
                             MustacheLikeValue::String(value) => return String::from(value),
                             MustacheLikeValue::Boolean(value) => return value.to_string(),
                             MustacheLikeValue::Number(value) => return value.to_string(),
@@ -58,7 +55,7 @@ impl MustacheLikeNode {
                         None => return String::from(""),
                         Some(value) => value,
                     };
-                    match &**value {
+                    match value {
                         MustacheLikeValue::Boolean(value) => {
                             if !value {
                                 return String::from("");
@@ -72,7 +69,7 @@ impl MustacheLikeNode {
                             }
                             return result;
                         }
-                        _ => todo!("Handle map section for {:?} value", &**value),
+                        _ => todo!("Handle map section for {:?} value", value),
                     }
                 }
                 _ => todo!("Handle section for {:?} value", context),
