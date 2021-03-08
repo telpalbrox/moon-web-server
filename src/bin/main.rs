@@ -74,17 +74,10 @@ fn main() {
                 .push(("Content-Type".to_owned(), "text/html".to_owned()));
 
             let mut context = HashMap::new();
-            let mut headers = vec![];
-            for (key, value) in request.headers {
-                let mut header = HashMap::new();
-                header.insert("key".to_owned(), JsonValue::String(key.to_owned()));
-                header.insert("value".to_owned(), JsonValue::String(value.to_owned()));
-                headers.push(JsonValue::Object(header));
-            }
-            context.insert("headers".to_owned(), JsonValue::Array(headers));
+            context.insert("headers".to_owned(), JsonValue::from(request.headers));
             response.set_body(render(
                 read_file("./src/templates/headers.html").to_owned(),
-                &JsonValue::Object(context),
+                &JsonValue::from(context),
             ));
         },
     );
