@@ -7,5 +7,5 @@ pub enum JsonValue {
     Number(f64),
     Array(Vec<JsonValue>),
     Object(HashMap<String, JsonValue>),
-    Null
+    Null,
 }

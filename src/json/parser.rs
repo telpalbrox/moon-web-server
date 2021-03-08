@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use super::JsonValue;
+use std::collections::HashMap;
 
 pub struct JsonParser<'a> {
     input: &'a str,
@@ -8,10 +8,7 @@ pub struct JsonParser<'a> {
 
 impl<'a> JsonParser<'a> {
     pub fn new(input: &'a str) -> Self {
-        Self {
-            input,
-            index:0
-        }
+        Self { input, index: 0 }
     }
 
     fn expect_char(&self, ch: char) {
@@ -91,7 +88,7 @@ impl<'a> JsonParser<'a> {
                     None => panic!("JsonParser::consume_quoted_string cannot peek"),
                     Some('"') | Some('\\') => {
                         break;
-                    },
+                    }
                     Some(_) => {
                         peek_index = peek_index + 1;
                     }
@@ -163,7 +160,7 @@ impl<'a> JsonParser<'a> {
         loop {
             let ch = match self.peek() {
                 None => break,
-                Some(ch) => ch
+                Some(ch) => ch,
             };
 
             if ch == '.' {
@@ -190,9 +187,15 @@ impl<'a> JsonParser<'a> {
         let number;
         if is_double {
             let final_number_str = format!("{}.{}", number_str, fraction_str);
-            number = final_number_str.parse().expect(&format!("JsonParser::parse_number Error parsing number: invalid number {:?}", final_number_str));
+            number = final_number_str.parse().expect(&format!(
+                "JsonParser::parse_number Error parsing number: invalid number {:?}",
+                final_number_str
+            ));
         } else {
-            number = number_str.parse().expect(&format!("JsonParser::parse_number Error parsing number: invalid number {:?}", number_str));
+            number = number_str.parse().expect(&format!(
+                "JsonParser::parse_number Error parsing number: invalid number {:?}",
+                number_str
+            ));
         }
 
         JsonValue::Number(number)
@@ -200,7 +203,7 @@ impl<'a> JsonParser<'a> {
 
     fn parse_array(&mut self) -> JsonValue {
         self.consume_specific('[');
-        let mut array = vec!();
+        let mut array = vec![];
 
         loop {
             self.consume_whitespace();
@@ -272,7 +275,7 @@ impl<'a> JsonParser<'a> {
         self.consume_whitespace();
         let type_hint = match self.peek() {
             Some(ch) => ch,
-            None => panic!("JsonParser::parse_value nothing to peek!")
+            None => panic!("JsonParser::parse_value nothing to peek!"),
         };
         match type_hint {
             '"' => self.parse_string(),
@@ -282,7 +285,7 @@ impl<'a> JsonParser<'a> {
             '-' | '0'..='9' => self.parse_number(),
             '[' => self.parse_array(),
             '{' => self.parse_object(),
-            _ => panic!("JsonParser::parse_value unknown type hint {:?}", type_hint)
+            _ => panic!("JsonParser::parse_value unknown type hint {:?}", type_hint),
         }
     }
 
@@ -334,13 +337,14 @@ mod tests {
     #[test]
     fn parse_array() {
         let value = JsonParser::new("[1, \"dos\", null]").parse();
-        assert_eq!(value, JsonValue::Array(
-            vec!(
+        assert_eq!(
+            value,
+            JsonValue::Array(vec!(
                 JsonValue::Number(1_f64),
                 JsonValue::String("dos".to_owned()),
                 JsonValue::Null
-            )
-        ));
+            ))
+        );
     }
 
     #[test]
