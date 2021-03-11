@@ -136,7 +136,7 @@ impl HttpServer {
 
 #[cfg(test)]
 mod tests {
-    use super::super::http_request::HttpRequest;
+    use super::super::request::HttpRequest;
     use super::*;
 
     #[test]
