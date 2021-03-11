@@ -1,4 +1,4 @@
-use super::HttpRequest;
+use super::{HttpRequest, HttpResponse};
 use std::collections::HashMap;
 
 pub struct HttpParser {
@@ -139,6 +139,9 @@ impl HttpParser {
             }
         }
 
+        self.consume_specific('\r');
+        self.consume_specific('\n');
+
         headers
     }
 
@@ -171,7 +174,7 @@ impl HttpParser {
         query_params
     }
 
-    pub fn parse_request(&mut self) -> HttpRequest {
+    fn parse_request_line(&mut self) -> (String, String, String) {
         let method = self.parse_string();
         self.consume_whitespace();
         let uri = self.parse_string();
@@ -180,10 +183,30 @@ impl HttpParser {
         let version = self.parse_string();
         self.consume_specific('\r');
         self.consume_specific('\n');
+        (method, uri, version)
+    }
+
+    fn parse_message(&mut self) -> (Vec<(String, String)>, String) {
         let headers = self.parse_headers();
-        self.consume_specific('\r');
-        self.consume_specific('\n');
         let body = self.parse_string_with_delimiter(Some('\0'));
+        (headers, body)
+    }
+
+    fn parse_status_line(&mut self) -> (String, u16, String) {
+        self.consume_specific_string("HTTP/");
+        let version = self.parse_string();
+        self.consume_specific(' ');
+        let status_code_str = self.parse_string();
+        let status_code = status_code_str.parse::<u16>().unwrap();
+        self.consume_specific(' ');
+        let reason = self.parse_string_with_delimiter(Some('\r'));
+        self.consume_specific('\n');
+        (version, status_code, reason)
+    }
+
+    pub fn parse_request(&mut self) -> HttpRequest {
+        let (method, uri, version) = self.parse_request_line();
+        let (headers, body) = self.parse_message();
 
         HttpRequest {
             method,
@@ -193,6 +216,19 @@ impl HttpParser {
             version,
             body,
             params: HashMap::new(),
+        }
+    }
+
+    pub fn parse_response(&mut self) -> HttpResponse {
+        let (version, status_code, reason) = self.parse_status_line();
+        let (headers, body) = self.parse_message();
+
+        HttpResponse {
+            version,
+            status_code,
+            reason,
+            headers,
+            body
         }
     }
 }
@@ -209,6 +245,8 @@ mod tests {
         "GET /test?query=1&query2=2 HTTP/1.1\r\nUserAgent: test rust\r\n\r\n";
     const SINGLE_QUERY_REQUEST: &str = "GET /test?query=1 HTTP/1.1\r\nUserAgent: test rust\r\n\r\n";
     const EMPTY_QUERY_REQUEST: &str = "GET /test?query= HTTP/1.1\r\nUserAgent: test rust\r\n\r\n";
+
+    const BASIC_RESPONSE: &str = "HTTP/1.1 200 Ok\r\nx-test:more test\r\n\r\nlol request to /";
 
     #[test]
     fn parse_basic_request() {
@@ -263,5 +301,18 @@ mod tests {
         assert_eq!(request.query.len(), 1);
         assert_eq!(request.query.get("query"), Some(&String::from("")));
         assert_eq!(request.query.get("query2"), None);
+    }
+
+    #[test]
+    fn parse_response() {
+        let mut parser = HttpParser::new(BASIC_RESPONSE.to_owned());
+        let response = parser.parse_response();
+        assert_eq!(response.version, "1.1");
+        assert_eq!(response.status_code, 200);
+        assert_eq!(response.reason, "Ok");
+        assert_eq!(response.headers.len(), 1);
+        assert_eq!(response.headers[0].0, "x-test");
+        assert_eq!(response.headers[0].1, "more test");
+        assert_eq!(response.body, "lol request to /");
     }
 }

@@ -3,9 +3,11 @@ use std::collections::HashMap;
 
 #[derive(Debug)]
 pub struct HttpResponse {
-    headers: HttpHeaders,
-    status_code: u16,
-    body: String,
+    pub headers: HttpHeaders,
+    pub status_code: u16,
+    pub body: String,
+    pub version: String,
+    pub reason: String
 }
 
 const HTTP_VERSION: &str = "HTTP/1.1";
@@ -28,6 +30,8 @@ impl HttpResponse {
             headers: Vec::new(),
             status_code: 200,
             body: String::new(),
+            version: String::from("1.1"),
+            reason: String::from("")
         }
     }
 

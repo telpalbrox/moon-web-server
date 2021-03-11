@@ -126,6 +126,7 @@ impl HttpServer {
                 };
 
                 let response = result.to_string();
+                println!("response: {:?}", response);
                 stream.write(response.as_bytes()).unwrap();
                 stream.flush().unwrap();
             });
