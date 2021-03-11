@@ -95,10 +95,10 @@ impl HttpServer {
                 routes.len();
                 let mut buffer = [0; 8192];
                 stream.read(&mut buffer).unwrap();
-                let raw_request = String::from_utf8_lossy(&buffer);
+                let raw_request = String::from_utf8_lossy(&buffer).replace('\0', "");
                 // println!("raw_request: {:?}", raw_request);
 
-                let mut request = HttpParser::new(raw_request.as_ref().to_owned()).parse();
+                let mut request = HttpParser::new(raw_request.to_owned()).parse_request();
 
                 let mut found_route = None;
                 for i in 0..routes.len() {
