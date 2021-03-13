@@ -6,12 +6,17 @@ use webserver::http::HttpServer;
 use webserver::http::{HttpRequest, HttpResponse};
 use webserver::json::JsonValue;
 use webserver::templating::render;
+// use webserver::http::send_http_request;
+
 
 fn read_file(path: &'static str) -> String {
     fs::read_to_string(path).unwrap()
 }
 
 fn main() {
+    // let response = send_http_request("GET", "httpbin.org", 80, "/get");
+    // println!("{:?}", response.json());
+
     let mut server = HttpServer::new();
 
     server.add_route(Route {

@@ -1,4 +1,5 @@
 use super::HttpHeaders;
+use super::super::json::{JsonParser, JsonValue};
 use std::collections::HashMap;
 
 #[derive(Debug)]
@@ -85,6 +86,10 @@ impl HttpResponse {
         let status_line = self.get_status_line();
         let headers = self.headers_to_string();
         format!("{}\r\n{}\r\n{}", status_line, headers, self.body())
+    }
+
+    pub fn json(&self) -> JsonValue {
+        JsonParser::new(&self.body).parse()
     }
 }
 
