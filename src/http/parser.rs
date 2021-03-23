@@ -11,7 +11,7 @@ impl HttpParser {
         HttpParser { index: 0, input }
     }
 
-        fn expect_char(&self, ch: char) {
+    fn expect_char(&self, ch: char) {
         match self.input.chars().nth(self.index) {
             Some(input_ch) => assert_eq!(
                 input_ch, ch,
@@ -228,7 +228,7 @@ impl HttpParser {
             status_code,
             reason,
             headers,
-            body
+            body,
         }
     }
 }

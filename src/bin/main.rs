@@ -8,7 +8,6 @@ use webserver::json::JsonValue;
 use webserver::templating::render;
 // use webserver::http::send_http_request;
 
-
 fn read_file(path: &'static str) -> String {
     fs::read_to_string(path).unwrap()
 }

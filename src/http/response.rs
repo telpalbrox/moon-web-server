@@ -1,5 +1,5 @@
-use super::HttpHeaders;
 use super::super::json::{JsonParser, JsonValue};
+use super::HttpHeaders;
 use std::collections::HashMap;
 
 #[derive(Debug)]
@@ -8,7 +8,7 @@ pub struct HttpResponse {
     pub status_code: u16,
     pub body: String,
     pub version: String,
-    pub reason: String
+    pub reason: String,
 }
 
 const HTTP_VERSION: &str = "HTTP/1.1";
@@ -32,7 +32,7 @@ impl HttpResponse {
             status_code: 200,
             body: String::new(),
             version: String::from("1.1"),
-            reason: String::from("")
+            reason: String::from(""),
         }
     }
 

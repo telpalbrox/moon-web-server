@@ -18,14 +18,14 @@ impl From<HttpHeaders> for JsonValue {
     }
 }
 
+mod client;
 mod parser;
 mod request;
 mod response;
 pub mod server;
-mod client;
+pub use client::send_http_request;
 pub use parser::HttpParser;
 pub use request::HttpRequest;
 pub use response::HttpResponse;
 pub use server::HttpServer;
 pub use server::HttpServer as Route;
-pub use client::send_http_request;

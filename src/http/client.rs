@@ -1,8 +1,8 @@
 use super::parser::HttpParser;
-use super::response::HttpResponse;
 use super::request::HttpRequest;
-use std::io::prelude::*;
+use super::response::HttpResponse;
 use std::collections::HashMap;
+use std::io::prelude::*;
 use std::net::TcpStream;
 
 pub fn send_http_request(method: &str, host: &str, port: u16, path: &str) -> HttpResponse {
@@ -12,9 +12,7 @@ pub fn send_http_request(method: &str, host: &str, port: u16, path: &str) -> Htt
         body: String::new(),
         uri: String::from(path),
         version: String::from("1.1"),
-        headers: vec!(
-            (String::from("Host"), String::from(&host))
-        ),
+        headers: vec![(String::from("Host"), String::from(&host))],
         query: HashMap::new(),
         params: HashMap::new(),
     };
