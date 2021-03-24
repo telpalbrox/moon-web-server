@@ -15,11 +15,11 @@ impl HttpParser {
         match self.input.chars().nth(self.index) {
             Some(input_ch) => assert_eq!(
                 input_ch, ch,
-                "JsonParser: Expected char {:?}, got {:?} at index {}",
+                "HttpParser: Expected char {:?}, got {:?} at index {}",
                 ch, input_ch, self.index
             ),
             None => panic!(
-                "JsonParser: Expected char at index '{}' but input lenght is '{}'",
+                "HttpParser: Expected char at index '{}' but input lenght is '{}'",
                 self.index,
                 self.input.len()
             ),
@@ -44,7 +44,7 @@ impl HttpParser {
                 input_ch
             }
             None => panic!(
-                "JsonParser: Expected char at index '{}' but input lenght is '{}'",
+                "HttpParser: Expected char at index '{}' but input length is '{}'",
                 self.index,
                 self.input.len()
             ),

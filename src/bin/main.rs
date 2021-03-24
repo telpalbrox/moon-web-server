@@ -1,21 +1,18 @@
 use std::collections::HashMap;
 use std::fs;
 use std::sync::Arc;
+use webserver::http::send_http_request;
 use webserver::http::server::Route;
 use webserver::http::HttpServer;
 use webserver::http::{HttpRequest, HttpResponse};
 use webserver::json::JsonValue;
 use webserver::templating::render;
-// use webserver::http::send_http_request;
 
 fn read_file(path: &'static str) -> String {
     fs::read_to_string(path).unwrap()
 }
 
 fn main() {
-    // let response = send_http_request("GET", "httpbin.org", 80, "/get");
-    // println!("{:?}", response.json());
-
     let mut server = HttpServer::new();
 
     server.add_route(Route {
@@ -83,6 +80,17 @@ fn main() {
                 read_file("./src/templates/headers.html").to_owned(),
                 &JsonValue::from(context),
             ));
+        },
+    );
+
+    server.get(
+        "/httpreq",
+        &|_request: HttpRequest, response: &mut HttpResponse| {
+            response
+                .headers_mut()
+                .push(("Content-Type".to_owned(), "application/json".to_owned()));
+            let bin_response = send_http_request("http://httpbin.org/get");
+            response.set_body(bin_response.body);
         },
     );
 

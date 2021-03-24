@@ -23,6 +23,7 @@ mod parser;
 mod request;
 mod response;
 pub mod server;
+mod url;
 pub use client::send_http_request;
 pub use parser::HttpParser;
 pub use request::HttpRequest;
