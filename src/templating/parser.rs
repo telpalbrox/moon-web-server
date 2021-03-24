@@ -68,8 +68,8 @@ impl MustacheLikeParser {
                     nodes.push(MustacheLikeNode::Text(text.to_owned()));
                     self.consume();
                 }
-                MustacheLikeToken::Name(name) => {
-                    nodes.push(MustacheLikeNode::Variable(name.to_owned()));
+                MustacheLikeToken::Name(name, escape) => {
+                    nodes.push(MustacheLikeNode::Variable(name.to_owned(), *escape));
                     self.consume();
                 }
                 MustacheLikeToken::OpenTag(tag_name) => {
@@ -102,14 +102,14 @@ mod tests {
     fn parser() {
         let tokens = vec![
             MustacheLikeToken::Text(String::from("Input ")),
-            MustacheLikeToken::Name(String::from("test")),
+            MustacheLikeToken::Name(String::from("test"), false),
             MustacheLikeToken::Text(String::from(" more text")),
         ];
         let mut parser = MustacheLikeParser::new(tokens);
         let nodes = parser.parse();
         let expected_nodes = vec![
             MustacheLikeNode::Text(String::from("Input ")),
-            MustacheLikeNode::Variable(String::from("test")),
+            MustacheLikeNode::Variable(String::from("test"), false),
             MustacheLikeNode::Text(String::from(" more text")),
         ];
         assert_eq!(nodes, expected_nodes);

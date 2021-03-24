@@ -10,7 +10,7 @@ pub struct MustacheLikeLexer {
 #[derive(Debug, PartialEq, Clone)]
 pub enum MustacheLikeToken {
     Text(String),
-    Name(String),
+    Name(String, bool),
     OpenTag(String),
     CloseTag(String),
 }
@@ -150,8 +150,11 @@ impl MustacheLikeLexer {
             } else if first_char == '/' {
                 let tag_name = text_inside_tag.chars().skip(1).collect();
                 self.tokens.push(MustacheLikeToken::CloseTag(tag_name));
+            } else if first_char == '&' {
+                let variable_name = text_inside_tag.chars().skip(1).collect();
+                self.tokens.push(MustacheLikeToken::Name(variable_name, false));
             } else {
-                self.tokens.push(MustacheLikeToken::Name(text_inside_tag));
+                self.tokens.push(MustacheLikeToken::Name(text_inside_tag, true));
             }
         }
 
@@ -177,7 +180,7 @@ mod tests {
             lexer.run(),
             vec!(
                 MustacheLikeToken::Text(String::from("Input ")),
-                MustacheLikeToken::Name(String::from("test")),
+                MustacheLikeToken::Name(String::from("test"), true),
                 MustacheLikeToken::Text(String::from(" more text"))
             )
         );

@@ -73,4 +73,36 @@ mod tests {
             "\n  <b>resque</b>\n\n  <b>hub</b>\n\n  <b>rip</b>\n"
         );
     }
+
+    #[test]
+    fn render_escaped_html() {
+        let mut context = HashMap::new();
+        context.insert(
+            "test".to_owned(),
+            JsonValue::String("Colors <h1 class=\"test\" id='test'>Test & roll \\lol `lal`</h1>".to_owned()),
+        );
+        assert_eq!(
+            render(
+                "<div>{{test}}</div>".to_owned(),
+                &JsonValue::Object(context)
+            ),
+            "<div>Colors &lt;h1 class=&quot;test&quot; id=&#39;test&#39;&gt;Test &amp; roll \\lol `lal`&lt;&#x2F;h1&gt;</div>"
+        );
+    }
+
+    #[test]
+    fn render_unescaped_html() {
+        let mut context = HashMap::new();
+        context.insert(
+            "test".to_owned(),
+            JsonValue::String("Colors <h1 class=\"test\" id='test'>Test & roll \\lol `lal`</h1>".to_owned()),
+        );
+        assert_eq!(
+            render(
+                "<div>{{&test}}</div>".to_owned(),
+                &JsonValue::Object(context)
+            ),
+            "<div>Colors <h1 class=\"test\" id='test'>Test & roll \\lol `lal`</h1></div>"
+        );
+    }
 }
