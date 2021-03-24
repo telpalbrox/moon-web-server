@@ -11,6 +11,7 @@ pub struct MustacheLikeLexer {
 pub enum MustacheLikeToken {
     Text(String),
     Name(String, bool),
+    Partial(String),
     OpenTag(String),
     CloseTag(String),
 }
@@ -144,17 +145,26 @@ impl MustacheLikeLexer {
                 Some(char) => char,
                 None => panic!("First char not found"),
             };
-            if first_char == '#' {
-                let tag_name = text_inside_tag.chars().skip(1).collect();
-                self.tokens.push(MustacheLikeToken::OpenTag(tag_name));
-            } else if first_char == '/' {
-                let tag_name = text_inside_tag.chars().skip(1).collect();
-                self.tokens.push(MustacheLikeToken::CloseTag(tag_name));
-            } else if first_char == '&' {
-                let variable_name = text_inside_tag.chars().skip(1).collect();
-                self.tokens.push(MustacheLikeToken::Name(variable_name, false));
-            } else {
-                self.tokens.push(MustacheLikeToken::Name(text_inside_tag, true));
+            match first_char {
+                '#' => {
+                    let tag_name = text_inside_tag.chars().skip(1).collect();
+                    self.tokens.push(MustacheLikeToken::OpenTag(tag_name));
+                },
+                '/' => {
+                    let tag_name = text_inside_tag.chars().skip(1).collect();
+                    self.tokens.push(MustacheLikeToken::CloseTag(tag_name));
+                },
+                '&' => {
+                    let variable_name = text_inside_tag.chars().skip(1).collect();
+                    self.tokens.push(MustacheLikeToken::Name(variable_name, false));
+                },
+                '>' => {
+                    let partial_name = text_inside_tag.chars().skip(1).collect();
+                    self.tokens.push(MustacheLikeToken::Partial(partial_name));
+                },
+                _ => {
+                    self.tokens.push(MustacheLikeToken::Name(text_inside_tag, true));
+                }
             }
         }
 

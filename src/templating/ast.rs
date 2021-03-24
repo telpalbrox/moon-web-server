@@ -1,4 +1,6 @@
 use super::super::json::JsonValue;
+use super::render_with_partials;
+use std::collections::HashMap;
 
 fn html_entity_map() -> Vec<(char, &'static str)> {
     vec![
@@ -24,20 +26,21 @@ pub enum MustacheLikeNode {
     Text(String),
     Variable(String, bool),
     Section(String, Vec<MustacheLikeNode>),
+    Partial(String),
 }
 
 impl MustacheLikeNode {
-    pub fn render_section(nodes: &Vec<MustacheLikeNode>, context: &JsonValue) -> String {
+    pub fn render_section(nodes: &Vec<MustacheLikeNode>, context: &JsonValue, partials: &HashMap<String, String>) -> String {
         let mut result = String::new();
 
         for node in nodes {
-            result.push_str(&node.render(context));
+            result.push_str(&node.render(context, partials));
         }
 
         result
     }
 
-    pub fn render(&self, context: &JsonValue) -> String {
+    pub fn render(&self, context: &JsonValue, partials: &HashMap<String, String>) -> String {
         match self {
             Self::Text(text) => {
                 return String::from(text);
@@ -52,9 +55,9 @@ impl MustacheLikeNode {
                         match value {
                             JsonValue::String(value) => {
                                 if *escape {
-                                    return escape_html(value)
+                                    return escape_html(value);
                                 } else {
-                                    return String::from(value)
+                                    return String::from(value);
                                 }
                             },
                             JsonValue::Boolean(value) => return value.to_string(),
@@ -76,20 +79,29 @@ impl MustacheLikeNode {
                             if !value {
                                 return String::from("");
                             }
-                            return MustacheLikeNode::render_section(nodes, context);
+                            return MustacheLikeNode::render_section(nodes, context, partials);
                         }
                         JsonValue::Array(array) => {
                             let mut result = String::new();
                             for element in array {
-                                result.push_str(&MustacheLikeNode::render_section(nodes, &element));
+                                result.push_str(&MustacheLikeNode::render_section(nodes, &element, partials));
                             }
                             return result;
                         }
                         _ => todo!("Handle map section for {:?} value", value),
                     }
-                }
+                },
                 _ => todo!("Handle section for {:?} value", context),
             },
+            Self::Partial(name) => {
+                let partial_src = partials.get(name);
+                match partial_src {
+                    None => return String::from(""),
+                    Some(partial_src) => {
+                        return render_with_partials(partial_src.to_owned(), context, partials);
+                    }
+                }
+            }
         };
     }
 }

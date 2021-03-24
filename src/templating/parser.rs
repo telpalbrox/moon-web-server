@@ -83,9 +83,13 @@ impl MustacheLikeParser {
                         tag_name.to_owned(),
                         section_nodes,
                     ));
-                }
+                },
                 MustacheLikeToken::CloseTag(tag_name) => {
                     panic!("Not expected close tag {:?}", tag_name);
+                },
+                MustacheLikeToken::Partial(name) => {
+                    nodes.push(MustacheLikeNode::Partial(name.to_owned()));
+                    self.consume();
                 }
             }
         }
