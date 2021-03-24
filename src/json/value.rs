@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::iter::FromIterator;
 
 #[derive(Debug, PartialEq)]
 pub enum JsonValue {
@@ -43,6 +44,38 @@ impl JsonValue {
                 result
             }
         }
+    }
+}
+
+impl JsonValue {
+    pub fn as_object(&self) -> &HashMap<String, JsonValue> {
+        match self {
+            Self::Object(map) => {
+                return map;
+            },
+            _ => panic!("Not an object")
+        }
+    }
+
+    pub fn as_number(&self) -> f64 {
+        match self {
+            Self::Number(number) => {
+                return *number;
+            },
+            _ => panic!("Not a number")
+        }
+    }
+}
+
+impl FromIterator<JsonValue> for JsonValue {
+    fn from_iter<I: IntoIterator<Item=JsonValue>>(iter: I) -> Self {
+        let mut array = Vec::new();
+
+        for value in iter {
+            array.push(value);
+        }
+
+        JsonValue::Array(array)
     }
 }
 

@@ -4,11 +4,12 @@ use std::collections::HashMap;
 pub struct HttpParser {
     input: String,
     index: usize,
+    length: usize
 }
 
 impl HttpParser {
     pub fn new(input: String) -> HttpParser {
-        HttpParser { index: 0, input }
+        HttpParser { index: 0, length: input.chars().count(), input }
     }
 
     fn expect_char(&self, ch: char) {
@@ -21,7 +22,7 @@ impl HttpParser {
             None => panic!(
                 "HttpParser: Expected char at index '{}' but input lenght is '{}'",
                 self.index,
-                self.input.len()
+                self.length
             ),
         }
     }
@@ -46,13 +47,13 @@ impl HttpParser {
             None => panic!(
                 "HttpParser: Expected char at index '{}' but input length is '{}'",
                 self.index,
-                self.input.len()
+                self.length
             ),
         }
     }
 
     fn peek_index(&self, index: usize) -> Option<char> {
-        if index >= self.input.len() {
+        if index >= self.length {
             return None;
         }
         self.input.chars().nth(index)
@@ -75,7 +76,7 @@ impl HttpParser {
         let mut string = String::new();
         let mut peek_index = self.index;
         loop {
-            if peek_index == self.input.len() {
+            if peek_index == self.length {
                 break;
             }
             let peeked_ch = self.peek_index(peek_index);
@@ -99,7 +100,7 @@ impl HttpParser {
             }
         }
 
-        if self.index < self.input.len() {
+        if self.index < self.length {
             if let Some(delimiter) = delimiter {
                 self.consume_specific(delimiter);
             }
@@ -120,7 +121,7 @@ impl HttpParser {
         }
 
         loop {
-            if self.index == self.input.len() {
+            if self.index == self.length {
                 break;
             }
             let key = self.parse_string_with_delimiter(Some(':'));
@@ -246,6 +247,7 @@ mod tests {
     const SINGLE_QUERY_REQUEST: &str = "GET /test?query=1 HTTP/1.1\r\nUserAgent: test rust\r\n\r\n";
     const EMPTY_QUERY_REQUEST: &str = "GET /test?query= HTTP/1.1\r\nUserAgent: test rust\r\n\r\n";
 
+    const HN_API_RESPONSE: &str = "HTTP/1.1 200 OK\r\nx-request-url: https://hacker-news.firebaseio.com/v0/item/26566925.json?\r\nserver: nginx\r\ndate: Wed, 24 Mar 2021 15:16:03 GMT\r\ncontent-type: application/json; charset=utf-8\r\ncontent-length: 315\r\nconnection: close\r\naccess-control-allow-origin: *\r\ncache-control: no-cache\r\nstrict-transport-security: max-age=31556926; includeSubDomains; preload\r\nx-final-url: https://hacker-news.firebaseio.com/v0/item/26566925.json?\r\naccess-control-expose-headers: server,date,content-type,content-length,connection,access-control-allow-origin,cache-control,strict-transport-security,x-final-url\r\n\r\n{\"by\":\"ldulcic\",\"descendants\":34,\"id\":26566925,\"kids\":[26568095,26567941,26568146,26567831,26568138,26568030,26567964,26567880,26568082,26567890,26567826,26568140],\"score\":66,\"time\":1616592635,\"title\":\"Removed Gem “Breaks” Rails ActiveStorage\",\"type\":\"story\",\"url\":\"https://github.com/rails/rails/issues/41750\"}";
     const BASIC_RESPONSE: &str = "HTTP/1.1 200 Ok\r\nx-test:more test\r\n\r\nlol request to /";
 
     #[test]
@@ -314,5 +316,12 @@ mod tests {
         assert_eq!(response.headers[0].0, "x-test");
         assert_eq!(response.headers[0].1, "more test");
         assert_eq!(response.body, "lol request to /");
+    }
+
+    #[test]
+    fn parse_hn_api_response() {
+        let mut parser = HttpParser::new(HN_API_RESPONSE.to_owned());
+        let response = parser.parse_response();
+        assert_eq!(response.headers.len(), 11);
     }
 }

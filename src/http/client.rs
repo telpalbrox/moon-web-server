@@ -1,6 +1,7 @@
 use super::parser::HttpParser;
 use super::request::HttpRequest;
 use super::response::HttpResponse;
+use super::{HttpHeaders};
 use super::url::{URLParser, URL};
 use std::collections::HashMap;
 use std::io::prelude::*;
@@ -20,21 +21,32 @@ fn get_uri(url: &URL) -> String {
 }
 
 pub fn send_http_request(url: &str) -> HttpResponse {
+    send_http_request_impl(url, Vec::new())
+}
+
+pub fn send_http_request_with_headers(url: &str, headers: HttpHeaders) -> HttpResponse {
+    send_http_request_impl(url, headers)
+}
+
+fn send_http_request_impl(url: &str, mut headers: HttpHeaders) -> HttpResponse {
     let url = URLParser::new(url).parse();
     let host = format!("{}:{}", url.host, url.port);
+    let mut req_headers = vec![(String::from("Host"), String::from(&host))];
+    req_headers.append(&mut headers);
     let request = HttpRequest {
         method: String::from("GET"),
         body: String::new(),
         uri: get_uri(&url),
         version: String::from("1.1"),
-        headers: vec![(String::from("Host"), String::from(&host))],
+        headers: req_headers,
         query: HashMap::new(),
         params: HashMap::new(),
     };
     let mut stream = TcpStream::connect(host).unwrap();
     stream.write(request.to_string().as_bytes()).unwrap();
-    let mut buffer = [0; 8192];
+    let mut buffer = [0; 1048576];
     stream.read(&mut buffer).unwrap();
     let raw_response = String::from_utf8_lossy(&buffer).replace('\0', "");
+    // println!("raw response: {:?}", raw_response);
     HttpParser::new(raw_response).parse_response()
 }

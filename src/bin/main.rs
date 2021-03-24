@@ -7,6 +7,7 @@ use webserver::http::HttpServer;
 use webserver::http::{HttpRequest, HttpResponse};
 use webserver::json::JsonValue;
 use webserver::templating::render;
+use webserver::oldweb::oldweb;
 
 fn read_file(path: &'static str) -> String {
     fs::read_to_string(path).unwrap()
@@ -93,6 +94,8 @@ fn main() {
             response.set_body(bin_response.body);
         },
     );
+
+    oldweb(&mut server);
 
     server.start();
 }
