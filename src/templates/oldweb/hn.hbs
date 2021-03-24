@@ -1,16 +1,14 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HN</title>
-</head>
-<body>
-    <ul>
-        {{#stories}}
-        <li>{{title}}</li>
-        {{/stories}}
-    </ul>
-</body>
-</html>
+<h1>Old HN</h1>
+<ul>
+    <li>new</li>
+    <li>past</li>
+    <li>comments</li>
+    <li>ask</li>
+    <li>show</li>
+    <li>jobs</li>
+</ul>
+<ol>
+    {{#stories}}
+    <li>{{>hnitemsummary}}</li>
+    {{/stories}}
+</ol>

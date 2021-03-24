@@ -87,7 +87,16 @@ impl MustacheLikeNode {
                                 result.push_str(&MustacheLikeNode::render_section(nodes, &element, partials));
                             }
                             return result;
-                        }
+                        },
+                        JsonValue::String(value) => {
+                            if value.is_empty() {
+                                return String::default();
+                            }
+                            return MustacheLikeNode::render_section(nodes, context, partials);
+                        },
+                        JsonValue::Number(_) => {
+                            return MustacheLikeNode::render_section(nodes, context, partials);
+                        },
                         _ => todo!("Handle map section for {:?} value", value),
                     }
                 },

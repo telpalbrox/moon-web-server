@@ -1,7 +1,7 @@
 use super::http::{HttpServer, HttpResponse, HttpHeaders};
 use super::http::send_http_request_with_headers;
 use super::json::{JsonValue};
-use super::templating::render;
+use super::templating::render_with_partials;
 use std::fs;
 use std::collections::HashMap;
 use std::thread;
@@ -79,6 +79,12 @@ pub fn oldweb(server: &mut HttpServer) {
         let hn_response = get_top_stories();
         let mut context = HashMap::new();
         context.insert("stories".to_owned(), hn_response);
-        res.set_body(render(read_file("./src/templates/oldweb/hn.hbs"), &JsonValue::Object(context)));
+        let layout = read_file("./src/templates/oldweb/layout.hbs");
+        let hn = read_file("./src/templates/oldweb/hn.hbs");
+        let hnitemsummary = read_file("./src/templates/oldweb/partials/hnitemsummary.hbs");
+        let mut partials = HashMap::new();
+        partials.insert("body".to_owned(), hn);
+        partials.insert("hnitemsummary".to_owned(), hnitemsummary);
+        res.set_body(render_with_partials(layout, &JsonValue::Object(context), &partials));
     });
 }

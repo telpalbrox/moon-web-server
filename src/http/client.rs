@@ -44,7 +44,7 @@ fn send_http_request_impl(url: &str, mut headers: HttpHeaders) -> HttpResponse {
     };
     let mut stream = TcpStream::connect(host).unwrap();
     stream.write(request.to_string().as_bytes()).unwrap();
-    let mut buffer = [0; 1048576];
+    let mut buffer = [0; 16384]; // 16K
     stream.read(&mut buffer).unwrap();
     let raw_response = String::from_utf8_lossy(&buffer).replace('\0', "");
     // println!("raw response: {:?}", raw_response);
