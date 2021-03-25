@@ -156,7 +156,14 @@ pub fn oldweb(server: &mut HttpServer) {
             Some(id) => id,
             None => panic!("hn id not found")
         };
-        let id = id.parse::<f64>().expect("id has to be a number");
+        let id = match id.parse::<f64>() {
+            Ok(id) => id,
+            Err(_) => {
+                res.set_status_code(400);
+                res.set_body(String::from("Item id has to be a number"));
+                return;
+            }
+        };
         let item = get_item(id);
         let layout = read_file("./src/templates/oldweb/layout.hbs");
         let hnitem = read_file("./src/templates/oldweb/hnitem.hbs");
