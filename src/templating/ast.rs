@@ -65,7 +65,7 @@ impl MustacheLikeNode {
                             _ => return String::from(""),
                         }
                     }
-                    _ => todo!("Handle name for {:?} value", context),
+                    _ => todo!("Handle name {:?} for {:?} value", name, context),
                 };
             }
             Self::Section(tag_name, nodes) => match context {
@@ -94,7 +94,10 @@ impl MustacheLikeNode {
                             }
                             return MustacheLikeNode::render_section(nodes, context, partials);
                         },
-                        JsonValue::Number(_) => {
+                        JsonValue::Number(value) => {
+                            if *value == 0f64 {
+                                return String::default();
+                            }
                             return MustacheLikeNode::render_section(nodes, context, partials);
                         },
                         _ => todo!("Handle map section for {:?} value", value),

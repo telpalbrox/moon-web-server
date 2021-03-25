@@ -1,0 +1,58 @@
+<div><a href="/hn">Home</a></div>
+
+<h2>{{title}}</h2>
+
+<div>{{>hnitemsummary}}</div>
+
+<ul>
+    {{>hncomment}}
+</ul>
+
+<script type="text/javascript">
+(function(root) {
+    function parent(element, className) {
+        if (element === document.documentElement) {
+            return null;
+        }
+        if (element.className.indexOf(className) !== -1) {
+            return element;
+        }
+        return parent(element.parentElement, className);
+    }
+
+    function child(element, className) {
+        if (!element.children || element.children.length === 0) {
+            return null;
+        }
+        for (var i = 0; i < element.children.length; i++) {
+            var child = element.children[i];
+            if (child.className.indexOf(className) !== -1) {
+                return child;
+            }
+        }
+    }
+
+    function getStyle(element) {
+        return element.style || element.runtimeStyle;
+    }
+
+    root.onCollapseClick = function(element) {
+        if (element.className !== "js-collapse") {
+            return;
+        }
+        var comment = parent(element, "js-comment");
+        var commentList = child(comment, "js-comment-list");
+        var commentText = child(comment, "js-comment-text");
+        if (!commentText) {
+            return;
+        }
+        var newDisplay = element.innerHTML === "-" ? "none" : "block";
+        getStyle(commentText).display = newDisplay;
+        element.innerHTML = element.innerHTML === "-" ? "+" : "-";
+        if (!commentList) {
+            return;
+        }
+        getStyle(commentList).display = newDisplay;
+    };
+})(window);
+</script>

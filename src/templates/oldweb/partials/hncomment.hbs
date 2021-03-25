@@ -1,0 +1,11 @@
+{{#kids}}
+<li class="js-comment">
+    <div><button class="js-collapse" onclick="onCollapseClick(this)" href="javascript:void(0)" style="margin-right: 8px;">-</button> {{by}}<small> | time</small></div>
+    <div class="js-comment-text">{{&text}}</div>
+    {{#hasKids}}
+    <ul class="js-comment-list">
+        {{>hncomment}}
+    </ul>
+    {{/hasKids}}
+</li>
+{{/kids}}

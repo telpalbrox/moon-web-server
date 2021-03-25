@@ -57,12 +57,39 @@ impl JsonValue {
         }
     }
 
+    pub fn as_object_mut(&mut self) -> &mut HashMap<String, JsonValue> {
+        match self {
+            Self::Object(map) => {
+                return map;
+            },
+            _ => panic!("Not an object")
+        }
+    }
+
     pub fn as_number(&self) -> f64 {
         match self {
             Self::Number(number) => {
                 return *number;
             },
             _ => panic!("Not a number")
+        }
+    }
+
+    pub fn as_array(&self) -> &Vec<JsonValue> {
+        match self {
+            Self::Array(array) => {
+                return array;
+            },
+            _ => panic!("Not an array")
+        }
+    }
+
+    pub fn as_array_mut(&mut self) -> &mut Vec<JsonValue> {
+        match self {
+            Self::Array(array) => {
+                return array;
+            },
+            _ => panic!("Not an array")
         }
     }
 }
