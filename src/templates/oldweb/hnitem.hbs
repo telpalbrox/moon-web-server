@@ -1,8 +1,17 @@
+{{#parent}}
+<div><a href="/hn/{{parent}}">Parent</a></div>
+{{/parent}}
+{{^parent}}
 <div><a href="/hn">Home</a></div>
+{{/parent}}
 
 <h2>{{title}}</h2>
 
 <div>{{>hnitemsummary}}</div>
+
+{{#text}}
+{{&text}}
+{{/text}}
 
 <ul>
     {{>hncomment}}

@@ -21,11 +21,27 @@ fn escape_html(string: &str) -> String {
     result
 }
 
+fn is_value_truthy(value: Option<&JsonValue>) -> bool {
+    let value = match value {
+        None => return false,
+        Some(value) => value
+    };
+
+    match value {
+        JsonValue::Boolean(value) => *value,
+        JsonValue::Array(value) => !value.is_empty(),
+        JsonValue::String(value) => !value.is_empty(),
+        JsonValue::Null => false,
+        JsonValue::Object(value) => !value.is_empty(),
+        JsonValue::Number(value) => *value != 0f64
+    }
+}
+
 #[derive(Debug, PartialEq)]
 pub enum MustacheLikeNode {
     Text(String),
     Variable(String, bool),
-    Section(String, Vec<MustacheLikeNode>),
+    Section(String, Vec<MustacheLikeNode>, bool),
     Partial(String),
 }
 
@@ -68,37 +84,43 @@ impl MustacheLikeNode {
                     _ => todo!("Handle name {:?} for {:?} value", name, context),
                 };
             }
-            Self::Section(tag_name, nodes) => match context {
+            Self::Section(tag_name, nodes, inverted) => match context {
                 JsonValue::Object(map) => {
-                    let value = match map.get(tag_name) {
-                        None => return String::from(""),
-                        Some(value) => value,
+                    let value = map.get(tag_name);
+                    let truthy = is_value_truthy(value);
+                    let should_render = truthy != *inverted;
+                    if !should_render {
+                        return String::default();
+                    }
+
+                    let render = || {
+                        return MustacheLikeNode::render_section(nodes, context, partials);
                     };
+
+                    let value = match value {
+                        None => return render(),
+                        Some(value) => value
+                    };
+
                     match value {
-                        JsonValue::Boolean(value) => {
-                            if !value {
-                                return String::from("");
-                            }
-                            return MustacheLikeNode::render_section(nodes, context, partials);
+                        JsonValue::Boolean(_) => {
+                            return render();
                         }
                         JsonValue::Array(array) => {
+                            if array.is_empty() {
+                                return render();
+                            }
                             let mut result = String::new();
                             for element in array {
                                 result.push_str(&MustacheLikeNode::render_section(nodes, &element, partials));
                             }
                             return result;
                         },
-                        JsonValue::String(value) => {
-                            if value.is_empty() {
-                                return String::default();
-                            }
-                            return MustacheLikeNode::render_section(nodes, context, partials);
+                        JsonValue::String(_) => {
+                            return render();
                         },
-                        JsonValue::Number(value) => {
-                            if *value == 0f64 {
-                                return String::default();
-                            }
-                            return MustacheLikeNode::render_section(nodes, context, partials);
+                        JsonValue::Number(_) => {
+                            return render();
                         },
                         _ => todo!("Handle map section for {:?} value", value),
                     }

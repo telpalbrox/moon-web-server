@@ -12,7 +12,7 @@ pub enum MustacheLikeToken {
     Text(String),
     Name(String, bool),
     Partial(String),
-    OpenTag(String),
+    OpenTag(String, bool),
     CloseTag(String),
 }
 
@@ -148,7 +148,11 @@ impl MustacheLikeLexer {
             match first_char {
                 '#' => {
                     let tag_name = text_inside_tag.chars().skip(1).collect();
-                    self.tokens.push(MustacheLikeToken::OpenTag(tag_name));
+                    self.tokens.push(MustacheLikeToken::OpenTag(tag_name, false));
+                },
+                '^' => {
+                    let tag_name = text_inside_tag.chars().skip(1).collect();
+                    self.tokens.push(MustacheLikeToken::OpenTag(tag_name, true));
                 },
                 '/' => {
                     let tag_name = text_inside_tag.chars().skip(1).collect();
@@ -204,7 +208,7 @@ mod tests {
             lexer.run(),
             vec!(
                 MustacheLikeToken::Text(String::from("Shown.\n")),
-                MustacheLikeToken::OpenTag(String::from("person")),
+                MustacheLikeToken::OpenTag(String::from("person"), false),
                 MustacheLikeToken::Text(String::from("\n  Never shown!\n")),
                 MustacheLikeToken::CloseTag(String::from("person")),
             )

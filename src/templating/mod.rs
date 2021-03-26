@@ -85,6 +85,85 @@ mod tests {
     }
 
     #[test]
+    fn render_conditional_number() {
+        let context = JsonParser::new("{ \"descendants\": 0 }").parse();
+        assert_eq!(
+            render(
+                "[{{#descendants}}{{descendants}} comments{{/descendants}}]".to_owned(),
+                &context
+            ),
+            "[]"
+        );
+    }
+
+    #[test]
+    fn render_inverted_boolean_false() {
+        let mut context = HashMap::new();
+        context.insert("boolean".to_owned(), JsonValue::Boolean(false));
+
+        assert_eq!(
+            render(
+                "{{^boolean}}This should be rendered.{{/boolean}}".to_owned(),
+                &JsonValue::Object(context)
+            ),
+            "This should be rendered."
+        );
+    }
+
+    #[test]
+    fn render_inverted_boolean_true() {
+        let mut context = HashMap::new();
+        context.insert("boolean".to_owned(), JsonValue::Boolean(true));
+
+        assert_eq!(
+            render(
+                "{{^boolean}}This should not be rendered.{{/boolean}}".to_owned(),
+                &JsonValue::Object(context)
+            ),
+            ""
+        );
+    }
+
+    #[test]
+    fn render_inverted_array_empty() {
+        let list = JsonValue::Array(vec![]);
+        let mut context = HashMap::new();
+        context.insert("list".to_owned(), list);
+
+        assert_eq!(
+            render(
+                "{{^list}}Yay lists!{{/list}}".to_owned(),
+                &JsonValue::Object(context)
+            ),
+            "Yay lists!"
+        );
+    }
+
+    #[test]
+    fn render_inverted_array_non_empty() {
+        let context = JsonParser::new("{ \"list\": [ { \"n\": 1 }, { \"n\": 2 }, { \"n\": 3 } ] }").parse();
+
+        assert_eq!(
+            render(
+                "{{^list}}{{n}}{{/list}}".to_owned(),
+                &context
+            ),
+            ""
+        );
+    }
+
+    #[test]
+    fn render_inverted_context_miss() {
+        assert_eq!(
+            render(
+                "[{{^missing}}Cannot find key 'missing'!{{/missing}}]".to_owned(),
+                &JsonValue::Object(HashMap::new())
+            ),
+            "[Cannot find key 'missing'!]"
+        );
+    }
+
+    #[test]
     fn render_escaped_html() {
         let mut context = HashMap::new();
         context.insert(

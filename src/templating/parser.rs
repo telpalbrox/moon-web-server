@@ -72,9 +72,10 @@ impl MustacheLikeParser {
                     nodes.push(MustacheLikeNode::Variable(name.to_owned(), *escape));
                     self.consume();
                 }
-                MustacheLikeToken::OpenTag(tag_name) => {
+                MustacheLikeToken::OpenTag(tag_name, inverted) => {
                     let close_tag_token = MustacheLikeToken::CloseTag(tag_name.to_owned());
                     let tag_name = tag_name.clone();
+                    let inverted = inverted.clone();
                     self.consume();
                     let section_tokens = self.consume_until(&close_tag_token);
                     self.consume_specific(&close_tag_token);
@@ -82,6 +83,7 @@ impl MustacheLikeParser {
                     nodes.push(MustacheLikeNode::Section(
                         tag_name.to_owned(),
                         section_nodes,
+                        inverted
                     ));
                 },
                 MustacheLikeToken::CloseTag(tag_name) => {
@@ -123,7 +125,7 @@ mod tests {
     fn parser_tree() {
         let tokens = vec![
             MustacheLikeToken::Text(String::from("Shown.\n")),
-            MustacheLikeToken::OpenTag(String::from("person")),
+            MustacheLikeToken::OpenTag(String::from("person"), false),
             MustacheLikeToken::Text(String::from("\n  Never shown!\n")),
             MustacheLikeToken::CloseTag(String::from("person")),
         ];
@@ -135,6 +137,7 @@ mod tests {
                 MustacheLikeNode::Section(
                     String::from("person"),
                     vec![MustacheLikeNode::Text(String::from("\n  Never shown!\n",))],
+                    false
                 ),
             ],
         );

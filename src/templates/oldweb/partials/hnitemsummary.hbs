@@ -1,1 +1,1 @@
-<a href="{{#url}}{{url}}{{/url}}">{{&title}}</a><small> | {{score}} points by {{by}} | time | <a href="/hn/{{id}}">{{#descendants}}{{descendants}} comments{{/descendants}}</a></small>
+<a href="{{#url}}{{url}}{{/url}}{{^url}}/hn/{{id}}{{/url}}">{{&title}}</a><small> | {{score}} points by {{by}} | time | <a href="/hn/{{id}}">{{#descendants}}{{descendants}} comments{{/descendants}}{{^descendants}}discuss{{/descendants}}</a></small>

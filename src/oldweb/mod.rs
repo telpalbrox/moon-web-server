@@ -51,7 +51,6 @@ fn get_item(id: f64) -> JsonValue {
     }).collect();
     let kid_items = map_id_to_objects(kids_ids, true);
     item_map.insert("kids".to_owned(), kid_items);
-    item_map.insert("hasKids".to_owned(), JsonValue::Boolean(true));
 
     item
 }
@@ -112,7 +111,6 @@ fn map_id_to_objects(ids: Vec<f64>, fetch_kids: bool) -> JsonValue {
         }).collect();
         let items = map_id_to_objects(ids, true);
         item.insert("kids".to_owned(), items);
-        item.insert("hasKids".to_owned(), JsonValue::Boolean(true));
     }
 
     return items;
