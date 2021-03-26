@@ -132,7 +132,7 @@ impl MustacheLikeNode {
                 match partial_src {
                     None => return String::from(""),
                     Some(partial_src) => {
-                        return render_with_partials(partial_src.to_owned(), context, partials);
+                        return render_with_partials(partial_src, context, partials);
                     }
                 }
             }

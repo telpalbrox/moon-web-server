@@ -48,5 +48,5 @@ fn send_http_request_impl(url: &str, mut headers: HttpHeaders) -> HttpResponse {
     stream.read(&mut buffer).unwrap();
     let raw_response = String::from_utf8_lossy(&buffer).replace('\0', "");
     // println!("raw response: {:?}", raw_response);
-    HttpParser::new(raw_response).parse_response()
+    HttpParser::new(&raw_response).parse_response()
 }

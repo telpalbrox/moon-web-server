@@ -62,7 +62,7 @@ fn main() {
             }
             context.insert("name".to_owned(), JsonValue::String(name));
             response.set_body(render(
-                read_file("./src/templates/hello.html").to_owned(),
+                &read_file("./src/templates/hello.html").to_owned(),
                 &JsonValue::Object(context),
             ));
         },
@@ -78,7 +78,7 @@ fn main() {
             let mut context = HashMap::new();
             context.insert("headers".to_owned(), JsonValue::from(request.headers));
             response.set_body(render(
-                read_file("./src/templates/headers.html").to_owned(),
+                &read_file("./src/templates/headers.html").to_owned(),
                 &JsonValue::from(context),
             ));
         },

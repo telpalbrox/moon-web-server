@@ -1,8 +1,8 @@
 const OPEN_TAG: &'static str = "{{";
 const CLOSE_TAG: &'static str = "}}";
 
-pub struct MustacheLikeLexer {
-    input: String,
+pub struct MustacheLikeLexer<'a> {
+    input: &'a str,
     index: usize,
     tokens: Vec<MustacheLikeToken>,
 }
@@ -16,8 +16,8 @@ pub enum MustacheLikeToken {
     CloseTag(String),
 }
 
-impl MustacheLikeLexer {
-    pub fn new(input: String) -> Self {
+impl<'a> MustacheLikeLexer<'a> {
+    pub fn new(input: &'a str) -> Self {
         Self {
             input,
             index: 0,
@@ -182,14 +182,14 @@ mod tests {
 
     #[test]
     fn consume_until() {
-        let mut lexer = MustacheLikeLexer::new("012{{".to_owned());
+        let mut lexer = MustacheLikeLexer::new("012{{");
         assert_eq!(lexer.consume_until("{{"), "012");
         assert_eq!(lexer.index, 3);
     }
 
     #[test]
     fn lexer() {
-        let lexer = MustacheLikeLexer::new("Input {{test}} more text".to_owned());
+        let lexer = MustacheLikeLexer::new("Input {{test}} more text");
         assert_eq!(
             lexer.run(),
             vec!(
@@ -203,7 +203,7 @@ mod tests {
     #[test]
     fn lexer_tags() {
         let lexer =
-            MustacheLikeLexer::new("Shown.\n{{#person}}\n  Never shown!\n{{/person}}".to_owned());
+            MustacheLikeLexer::new("Shown.\n{{#person}}\n  Never shown!\n{{/person}}");
         assert_eq!(
             lexer.run(),
             vec!(

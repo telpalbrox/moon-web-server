@@ -146,7 +146,7 @@ pub fn oldweb(server: &mut HttpServer) {
         let mut partials = HashMap::new();
         partials.insert("body".to_owned(), hn);
         partials.insert("hnitemsummary".to_owned(), hnitemsummary);
-        res.set_body(render_with_partials(layout, &JsonValue::Object(context), &partials));
+        res.set_body(render_with_partials(&layout, &JsonValue::Object(context), &partials));
     });
 
     server.get("/hn/:id", &|req, res| {
@@ -171,6 +171,6 @@ pub fn oldweb(server: &mut HttpServer) {
         partials.insert("body".to_owned(), hnitem);
         partials.insert("hncomment".to_owned(), hncomment);
         partials.insert("hnitemsummary".to_owned(), hnitemsummary);
-        res.set_body(render_with_partials(layout, &item, &partials));
+        res.set_body(render_with_partials(&layout, &item, &partials));
     });
 }

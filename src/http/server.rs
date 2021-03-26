@@ -98,7 +98,7 @@ impl HttpServer {
                 let raw_request = String::from_utf8_lossy(&buffer).replace('\0', "");
                 // println!("raw_request: {:?}", raw_request);
 
-                let mut request = HttpParser::new(raw_request.to_owned()).parse_request();
+                let mut request = HttpParser::new(&raw_request).parse_request();
 
                 let mut found_route = None;
                 for i in 0..routes.len() {

@@ -7,15 +7,15 @@ pub use lexer::{MustacheLikeLexer, MustacheLikeToken};
 use parser::MustacheLikeParser;
 use std::collections::HashMap;
 
-pub fn render(input: String, context: &JsonValue) -> String {
+pub fn render(input: &str, context: &JsonValue) -> String {
     render_impl(input, context, &HashMap::new())
 }
 
-pub fn render_with_partials(input: String, context: &JsonValue, partials: &HashMap<String, String>) -> String {
+pub fn render_with_partials(input: &str, context: &JsonValue, partials: &HashMap<String, String>) -> String {
     render_impl(input, context, partials)
 }
 
-fn render_impl(input: String, context: &JsonValue, partials: &HashMap<String, String>) -> String {
+fn render_impl(input: &str, context: &JsonValue, partials: &HashMap<String, String>) -> String {
     let tokens = MustacheLikeLexer::new(input).run();
     assert_ne!(tokens.len(), 0, "No tokens were generated");
     let nodes = MustacheLikeParser::new(tokens).parse();
@@ -38,7 +38,7 @@ mod tests {
         );
         assert_eq!(
             render(
-                "Input {{test}} more text".to_owned(),
+                "Input {{test}} more text",
                 &JsonValue::Object(context)
             ),
             "Input value test more text"
@@ -52,7 +52,7 @@ mod tests {
 
         assert_eq!(
             render(
-                "Shown.\n{{#person}}\n  Never shown!\n{{/person}}".to_owned(),
+                "Shown.\n{{#person}}\n  Never shown!\n{{/person}}",
                 &JsonValue::Object(context)
             ),
             "Shown.\n\n  Never shown!\n"
@@ -77,7 +77,7 @@ mod tests {
 
         assert_eq!(
             render(
-                "{{#repo}}\n  <b>{{name}}</b>\n{{/repo}}".to_owned(),
+                "{{#repo}}\n  <b>{{name}}</b>\n{{/repo}}",
                 &JsonValue::Object(context)
             ),
             "\n  <b>resque</b>\n\n  <b>hub</b>\n\n  <b>rip</b>\n"
@@ -89,7 +89,7 @@ mod tests {
         let context = JsonParser::new("{ \"descendants\": 0 }").parse();
         assert_eq!(
             render(
-                "[{{#descendants}}{{descendants}} comments{{/descendants}}]".to_owned(),
+                "[{{#descendants}}{{descendants}} comments{{/descendants}}]",
                 &context
             ),
             "[]"
@@ -103,7 +103,7 @@ mod tests {
 
         assert_eq!(
             render(
-                "{{^boolean}}This should be rendered.{{/boolean}}".to_owned(),
+                "{{^boolean}}This should be rendered.{{/boolean}}",
                 &JsonValue::Object(context)
             ),
             "This should be rendered."
@@ -117,7 +117,7 @@ mod tests {
 
         assert_eq!(
             render(
-                "{{^boolean}}This should not be rendered.{{/boolean}}".to_owned(),
+                "{{^boolean}}This should not be rendered.{{/boolean}}",
                 &JsonValue::Object(context)
             ),
             ""
@@ -132,7 +132,7 @@ mod tests {
 
         assert_eq!(
             render(
-                "{{^list}}Yay lists!{{/list}}".to_owned(),
+                "{{^list}}Yay lists!{{/list}}",
                 &JsonValue::Object(context)
             ),
             "Yay lists!"
@@ -145,7 +145,7 @@ mod tests {
 
         assert_eq!(
             render(
-                "{{^list}}{{n}}{{/list}}".to_owned(),
+                "{{^list}}{{n}}{{/list}}",
                 &context
             ),
             ""
@@ -156,7 +156,7 @@ mod tests {
     fn render_inverted_context_miss() {
         assert_eq!(
             render(
-                "[{{^missing}}Cannot find key 'missing'!{{/missing}}]".to_owned(),
+                "[{{^missing}}Cannot find key 'missing'!{{/missing}}]",
                 &JsonValue::Object(HashMap::new())
             ),
             "[Cannot find key 'missing'!]"
@@ -172,7 +172,7 @@ mod tests {
         );
         assert_eq!(
             render(
-                "<div>{{test}}</div>".to_owned(),
+                "<div>{{test}}</div>",
                 &JsonValue::Object(context)
             ),
             "<div>Colors &lt;h1 class=&quot;test&quot; id=&#39;test&#39;&gt;Test &amp; roll \\lol `lal`&lt;&#x2F;h1&gt;</div>"
@@ -188,7 +188,7 @@ mod tests {
         );
         assert_eq!(
             render(
-                "<div>{{&test}}</div>".to_owned(),
+                "<div>{{&test}}</div>",
                 &JsonValue::Object(context)
             ),
             "<div>Colors <h1 class=\"test\" id='test'>Test & roll \\lol `lal`</h1></div>"
@@ -200,13 +200,13 @@ mod tests {
         let context = JsonValue::Object(HashMap::new());
         let mut partials = HashMap::new();
         partials.insert("text".to_owned(), "from partial".to_owned());
-        assert_eq!(render_with_partials("{{>text}}".to_owned(), &context, &partials), "from partial");
+        assert_eq!(render_with_partials("{{>text}}", &context, &partials), "from partial");
     }
 
     #[test]
     fn render_fail_lookup_partial() {
         let context = JsonValue::Object(HashMap::new());
-        assert_eq!(render("{{>text}}".to_owned(), &context), "");
+        assert_eq!(render("{{>text}}", &context), "");
     }
 
     #[test]
@@ -218,7 +218,7 @@ mod tests {
         );
         let mut partials = HashMap::new();
         partials.insert("partial".to_owned(), "*{{text}}*".to_owned());
-        assert_eq!(render_with_partials("{{>partial}}".to_owned(), &JsonValue::Object(context), &partials), "*Content*");
+        assert_eq!(render_with_partials("{{>partial}}", &JsonValue::Object(context), &partials), "*Content*");
     }
 
     #[test]
@@ -226,6 +226,6 @@ mod tests {
         let context = JsonParser::new("{ \"content\": \"X\", \"nodes\": [ { \"content\": \"Y\", \"nodes\": [] } ] }").parse();
         let mut partials = HashMap::new();
         partials.insert("node".to_owned(), "{{content}}<{{#nodes}}{{>node}}{{/nodes}}>".to_owned());
-        assert_eq!(render_with_partials("{{>node}}".to_owned(), &context, &partials), "X<Y<>>");
+        assert_eq!(render_with_partials("{{>node}}", &context, &partials), "X<Y<>>");
     }
 }

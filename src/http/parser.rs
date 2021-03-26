@@ -1,14 +1,14 @@
 use super::{HttpRequest, HttpResponse};
 use std::collections::HashMap;
 
-pub struct HttpParser {
-    input: String,
+pub struct HttpParser<'a> {
+    input: &'a str,
     index: usize,
     length: usize
 }
 
-impl HttpParser {
-    pub fn new(input: String) -> HttpParser {
+impl<'a> HttpParser<'a> {
+    pub fn new(input: &'a str) -> HttpParser {
         HttpParser { index: 0, length: input.chars().count(), input }
     }
 
@@ -252,7 +252,7 @@ mod tests {
 
     #[test]
     fn parse_basic_request() {
-        let mut parser = HttpParser::new(BASIC_REQUEST.to_owned());
+        let mut parser = HttpParser::new(BASIC_REQUEST);
         let request = parser.parse_request();
         assert_eq!(request.method, "GET");
         assert_eq!(request.uri, "/test");
@@ -264,7 +264,7 @@ mod tests {
 
     #[test]
     fn parse_empty_header_request() {
-        let mut parser = HttpParser::new(EMPTY_HEADER_REQUEST.to_owned());
+        let mut parser = HttpParser::new(EMPTY_HEADER_REQUEST);
         let request = parser.parse_request();
         assert_eq!(request.method, "GET");
         assert_eq!(request.uri, "/test");
@@ -274,31 +274,31 @@ mod tests {
 
     #[test]
     fn parse_post_request() {
-        let mut parser = HttpParser::new(POST_REQUEST.to_owned());
+        let mut parser = HttpParser::new(POST_REQUEST);
         let request = parser.parse_request();
         assert_eq!(request.body, "test rust2");
     }
 
     #[test]
     fn parse_firefox_request() {
-        let mut parser = HttpParser::new(FIREFOX_REQUEST.to_owned());
+        let mut parser = HttpParser::new(FIREFOX_REQUEST);
         let request = parser.parse_request();
         assert_eq!(request.headers.len(), 7);
     }
 
     #[test]
     fn parse_query_params() {
-        let mut parser = HttpParser::new(SINGLE_QUERY_REQUEST.to_owned());
+        let mut parser = HttpParser::new(SINGLE_QUERY_REQUEST);
         let request = parser.parse_request();
         assert_eq!(request.query.len(), 1);
         assert_eq!(request.query.get("query"), Some(&String::from("1")));
         assert_eq!(request.query.get("query2"), None);
-        let mut parser = HttpParser::new(QUERY_REQUEST.to_owned());
+        let mut parser = HttpParser::new(QUERY_REQUEST);
         let request = parser.parse_request();
         assert_eq!(request.query.len(), 2);
         assert_eq!(request.query.get("query"), Some(&String::from("1")));
         assert_eq!(request.query.get("query2"), Some(&String::from("2")));
-        let mut parser = HttpParser::new(EMPTY_QUERY_REQUEST.to_owned());
+        let mut parser = HttpParser::new(EMPTY_QUERY_REQUEST);
         let request = parser.parse_request();
         assert_eq!(request.query.len(), 1);
         assert_eq!(request.query.get("query"), Some(&String::from("")));
@@ -307,7 +307,7 @@ mod tests {
 
     #[test]
     fn parse_response() {
-        let mut parser = HttpParser::new(BASIC_RESPONSE.to_owned());
+        let mut parser = HttpParser::new(BASIC_RESPONSE);
         let response = parser.parse_response();
         assert_eq!(response.version, "1.1");
         assert_eq!(response.status_code, 200);
@@ -320,7 +320,7 @@ mod tests {
 
     #[test]
     fn parse_hn_api_response() {
-        let mut parser = HttpParser::new(HN_API_RESPONSE.to_owned());
+        let mut parser = HttpParser::new(HN_API_RESPONSE);
         let response = parser.parse_response();
         assert_eq!(response.headers.len(), 11);
     }
