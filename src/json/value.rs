@@ -15,7 +15,7 @@ impl JsonValue {
     pub fn stringify(&self) -> String {
         match self {
             Self::Number(number) => number.to_string(),
-            Self::String(string) => string.to_owned(),
+            Self::String(string) => format!("\"{}\"", string),
             Self::Boolean(boolean) => boolean.to_string(),
             Self::Null => String::from("null"),
             Self::Array(elements) => {
@@ -159,7 +159,7 @@ mod tests {
 
     #[test]
     fn stringify_string() {
-        assert_eq!(JsonValue::String("test".to_owned()).stringify(), "test");
+        assert_eq!(JsonValue::String("test".to_owned()).stringify(), "\"test\"");
     }
 
     #[test]
