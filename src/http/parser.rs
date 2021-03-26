@@ -1,30 +1,37 @@
 use super::{HttpRequest, HttpResponse};
 use std::collections::HashMap;
 
-pub struct HttpParser<'a> {
-    input: &'a str,
+pub struct HttpParser {
+    input: Vec<char>,
     index: usize,
     length: usize
 }
 
-impl<'a> HttpParser<'a> {
-    pub fn new(input: &'a str) -> HttpParser {
-        HttpParser { index: 0, length: input.chars().count(), input }
+impl HttpParser {
+    pub fn new(input: &str) -> HttpParser {
+        let chars: Vec<char> = input.chars().collect();
+        HttpParser { index: 0, length: chars.len(), input: chars }
     }
 
-    fn expect_char(&self, ch: char) {
-        match self.input.chars().nth(self.index) {
-            Some(input_ch) => assert_eq!(
-                input_ch, ch,
-                "HttpParser: Expected char {:?}, got {:?} at index {}",
-                ch, input_ch, self.index
-            ),
-            None => panic!(
+    fn check_len(&self) {
+        if self.index >= self.length {
+            panic!(
                 "HttpParser: Expected char at index '{}' but input lenght is '{}'",
                 self.index,
                 self.length
-            ),
+            );
         }
+    }
+
+    fn expect_char(&self, ch: char) {
+        self.check_len();
+        let input_ch = self.input[self.index];
+
+        assert_eq!(
+            input_ch, ch,
+            "HttpParser: Expected char {:?}, got {:?} at index {}",
+            ch, input_ch, self.index
+        );
     }
 
     fn consume_specific(&mut self, ch: char) {
@@ -39,27 +46,21 @@ impl<'a> HttpParser<'a> {
     }
 
     fn consume(&mut self) -> char {
-        match self.input.chars().nth(self.index) {
-            Some(input_ch) => {
-                self.index = self.index + 1;
-                input_ch
-            }
-            None => panic!(
-                "HttpParser: Expected char at index '{}' but input length is '{}'",
-                self.index,
-                self.length
-            ),
-        }
+        self.check_len();
+        let input_ch = self.input[self.index];
+
+        self.index = self.index + 1;
+        input_ch
     }
 
-    fn peek_index(&self, index: usize) -> Option<char> {
+    fn peek_index(&self, index: usize) -> Option<&char> {
         if index >= self.length {
             return None;
         }
-        self.input.chars().nth(index)
+        self.input.get(index)
     }
 
-    fn peek(&self) -> Option<char> {
+    fn peek(&self) -> Option<&char> {
         self.peek_index(self.index)
     }
 
@@ -85,7 +86,7 @@ impl<'a> HttpParser<'a> {
             }
             let peeked_ch = peeked_ch.unwrap();
             if let Some(delimiter) = delimiter {
-                if delimiter == peeked_ch {
+                if delimiter == *peeked_ch {
                     break;
                 }
             } else if peeked_ch.is_whitespace() {
@@ -116,7 +117,7 @@ impl<'a> HttpParser<'a> {
     fn parse_headers(&mut self) -> Vec<(String, String)> {
         let mut headers = Vec::new();
 
-        if self.peek() == Some('\r') {
+        if self.peek() == Some(&'\r') {
             return headers;
         }
 
@@ -135,7 +136,7 @@ impl<'a> HttpParser<'a> {
                 panic!("Header value for key '{:?}' is empty", key);
             }
             headers.push((key, value));
-            if self.peek() == Some('\r') && self.peek_index(self.index + 1) == Some('\n') {
+            if self.peek() == Some(&'\r') && self.peek_index(self.index + 1) == Some(&'\n') {
                 break;
             }
         }

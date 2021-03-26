@@ -1,8 +1,8 @@
 const OPEN_TAG: &'static str = "{{";
 const CLOSE_TAG: &'static str = "}}";
 
-pub struct MustacheLikeLexer<'a> {
-    input: &'a str,
+pub struct MustacheLikeLexer {
+    input: Vec<char>,
     index: usize,
     tokens: Vec<MustacheLikeToken>,
 }
@@ -16,19 +16,19 @@ pub enum MustacheLikeToken {
     CloseTag(String),
 }
 
-impl<'a> MustacheLikeLexer<'a> {
-    pub fn new(input: &'a str) -> Self {
+impl MustacheLikeLexer {
+    pub fn new(input: &str) -> Self {
         Self {
-            input,
+            input: input.chars().collect(),
             index: 0,
             tokens: Vec::new(),
         }
     }
 
     fn expect_char(&self, ch: char) {
-        match self.input.chars().nth(self.index) {
+        match self.input.get(self.index) {
             Some(input_ch) => assert_eq!(
-                input_ch, ch,
+                *input_ch, ch,
                 "MustacheLikeLexer: Expected char {:?}, got {:?} at index {}",
                 ch, input_ch, self.index
             ),
@@ -52,10 +52,10 @@ impl<'a> MustacheLikeLexer<'a> {
     }
 
     fn consume(&mut self) -> char {
-        match self.input.chars().nth(self.index) {
+        match self.input.get(self.index) {
             Some(input_ch) => {
                 self.index = self.index + 1;
-                input_ch
+                *input_ch
             }
             None => panic!(
                 "MustacheLikeLexer: Expected char at index '{}' but input lenght is '{}'",
@@ -65,14 +65,14 @@ impl<'a> MustacheLikeLexer<'a> {
         }
     }
 
-    fn peek_index(&self, index: usize) -> Option<char> {
+    fn peek_index(&self, index: usize) -> Option<&char> {
         if index >= self.input.len() {
             return None;
         }
-        self.input.chars().nth(index)
+        self.input.get(index)
     }
 
-    fn peek(&self) -> Option<char> {
+    fn peek(&self) -> Option<&char> {
         self.peek_index(self.index)
     }
 
@@ -93,7 +93,7 @@ impl<'a> MustacheLikeLexer<'a> {
         let mut part = String::new();
         for i in 0..delimiter_len {
             if let Some(ch) = self.peek_index(self.index + i) {
-                part.push(ch);
+                part.push(*ch);
             } else {
                 break;
             }

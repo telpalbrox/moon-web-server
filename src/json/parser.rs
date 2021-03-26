@@ -1,20 +1,20 @@
 use super::JsonValue;
 use std::collections::HashMap;
 
-pub struct JsonParser<'a> {
-    input: &'a str,
+pub struct JsonParser {
+    input: Vec<char>,
     index: usize,
 }
 
-impl<'a> JsonParser<'a> {
-    pub fn new(input: &'a str) -> Self {
-        Self { input, index: 0 }
+impl JsonParser {
+    pub fn new(input: &str) -> Self {
+        Self { input: input.chars().collect(), index: 0 }
     }
 
     fn expect_char(&self, ch: char) {
-        match self.input.chars().nth(self.index) {
+        match self.input.get(self.index) {
             Some(input_ch) => assert_eq!(
-                input_ch, ch,
+                *input_ch, ch,
                 "JsonParser: Expected char {:?}, got {:?} at index {}",
                 ch, input_ch, self.index
             ),
@@ -38,10 +38,10 @@ impl<'a> JsonParser<'a> {
     }
 
     fn consume(&mut self) -> char {
-        match self.input.chars().nth(self.index) {
+        match self.input.get(self.index) {
             Some(input_ch) => {
                 self.index = self.index + 1;
-                input_ch
+                *input_ch
             }
             None => panic!(
                 "JsonParser: Expected char at index '{}' but input lenght is '{}'",
@@ -51,14 +51,14 @@ impl<'a> JsonParser<'a> {
         }
     }
 
-    fn peek_index(&self, index: usize) -> Option<char> {
+    fn peek_index(&self, index: usize) -> Option<&char> {
         if index >= self.input.len() {
             return None;
         }
-        self.input.chars().nth(index)
+        self.input.get(index)
     }
 
-    fn peek(&self) -> Option<char> {
+    fn peek(&self) -> Option<&char> {
         self.peek_index(self.index)
     }
 
@@ -95,6 +95,8 @@ impl<'a> JsonParser<'a> {
                 }
             }
 
+            let ch = *ch.unwrap();
+
             if peek_index != self.index {
                 while peek_index != self.index {
                     result.push(self.consume());
@@ -105,11 +107,11 @@ impl<'a> JsonParser<'a> {
                 break;
             }
 
-            if ch == Some('"') {
+            if ch == '"' {
                 break;
             }
 
-            if ch != Some('\\') {
+            if ch != '\\' {
                 result.push(self.consume());
                 continue;
             }
@@ -160,7 +162,7 @@ impl<'a> JsonParser<'a> {
         loop {
             let ch = match self.peek() {
                 None => break,
-                Some(ch) => ch,
+                Some(ch) => *ch,
             };
 
             if ch == '.' {
@@ -208,7 +210,7 @@ impl<'a> JsonParser<'a> {
         loop {
             self.consume_whitespace();
 
-            if self.peek() == Some(']') {
+            if self.peek() == Some(&']') {
                 break;
             }
 
@@ -216,11 +218,11 @@ impl<'a> JsonParser<'a> {
             array.push(element);
             self.consume_whitespace();
 
-            if self.peek() == Some(']') {
+            if self.peek() == Some(&']') {
                 break;
             }
             self.consume_specific(',');
-            if self.peek() == Some(']') {
+            if self.peek() == Some(&']') {
                 panic!("JsonParser::parse_array cannot close array after ','");
             }
         }
@@ -237,7 +239,7 @@ impl<'a> JsonParser<'a> {
 
         loop {
             self.consume_whitespace();
-            if self.peek() == Some('}') {
+            if self.peek() == Some(&'}') {
                 break;
             }
 
@@ -254,13 +256,13 @@ impl<'a> JsonParser<'a> {
             object.insert(key, value);
 
             self.consume_whitespace();
-            if self.peek() == Some('}') {
+            if self.peek() == Some(&'}') {
                 break;
             }
 
             self.consume_specific(',');
             self.consume_whitespace();
-            if self.peek() == Some('}') {
+            if self.peek() == Some(&'}') {
                 panic!("JsonParser::parse_object cannot close object after ','");
             }
         }
