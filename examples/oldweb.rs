@@ -1,7 +1,7 @@
-use super::http::{HttpServer, HttpResponse, HttpHeaders};
-use super::http::send_http_request_with_headers;
-use super::json::{JsonValue};
-use super::templating::render_with_partials;
+use webserver::http::{HttpServer, HttpResponse, HttpHeaders};
+use webserver::http::send_http_request_with_headers;
+use webserver::json::{JsonValue};
+use webserver::templating::render_with_partials;
 use std::fs;
 use std::collections::HashMap;
 use std::thread;
@@ -160,15 +160,15 @@ fn get_top_stories() -> JsonValue {
     get_stories("topstories")
 }
 
-pub fn oldweb(server: &mut HttpServer) {
+fn oldweb(server: &mut HttpServer) {
     server.get("/hn", &|_req, mut res| {
         html(&mut res);
         let hn_response = get_top_stories();
         let mut context = HashMap::new();
         context.insert("stories".to_owned(), hn_response);
-        let layout = read_file("./src/templates/oldweb/layout.hbs");
-        let hn = read_file("./src/templates/oldweb/hn.hbs");
-        let hnitemsummary = read_file("./src/templates/oldweb/partials/hnitemsummary.hbs");
+        let layout = read_file("./examples/templates/oldweb/layout.hbs");
+        let hn = read_file("./examples/templates/oldweb/hn.hbs");
+        let hnitemsummary = read_file("./examples/templates/oldweb/partials/hnitemsummary.hbs");
         let mut partials = HashMap::new();
         partials.insert("body".to_owned(), hn);
         partials.insert("hnitemsummary".to_owned(), hnitemsummary);
@@ -189,14 +189,20 @@ pub fn oldweb(server: &mut HttpServer) {
             }
         };
         let item = get_item(id);
-        let layout = read_file("./src/templates/oldweb/layout.hbs");
-        let hnitem = read_file("./src/templates/oldweb/hnitem.hbs");
-        let hncomment = read_file("./src/templates/oldweb/partials/hncomment.hbs");
-        let hnitemsummary = read_file("./src/templates/oldweb/partials/hnitemsummary.hbs");
+        let layout = read_file("./examples/templates/oldweb/layout.hbs");
+        let hnitem = read_file("./examples/templates/oldweb/hnitem.hbs");
+        let hncomment = read_file("./examples/templates/oldweb/partials/hncomment.hbs");
+        let hnitemsummary = read_file("./examples/templates/oldweb/partials/hnitemsummary.hbs");
         let mut partials = HashMap::new();
         partials.insert("body".to_owned(), hnitem);
         partials.insert("hncomment".to_owned(), hncomment);
         partials.insert("hnitemsummary".to_owned(), hnitemsummary);
         res.set_body(render_with_partials(&layout, &item, &partials));
     });
+}
+
+fn main() {
+    let mut server = HttpServer::new();
+    oldweb(&mut server);
+    server.start();
 }
