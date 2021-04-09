@@ -1,6 +1,6 @@
 {{#kids}}
 <li class="js-comment">
-    <div><button class="js-collapse" onclick="onCollapseClick(this)" href="javascript:void(0)" style="margin-right: 8px;">-</button> {{by}}<small> | time</small></div>
+    <div><button class="js-collapse" onclick="onCollapseClick(this)" href="javascript:void(0)" style="margin-right: 8px;">-</button> {{by}}<small> | {{relative_time}}</small></div>
     <div class="js-comment-text">{{&text}}</div>
     <ul class="js-comment-list">
         {{>hncomment}}

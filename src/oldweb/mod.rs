@@ -6,6 +6,7 @@ use std::fs;
 use std::collections::HashMap;
 use std::thread;
 use std::sync::mpsc::channel;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 fn read_file(path: &'static str) -> String {
     fs::read_to_string(path).unwrap()
@@ -28,6 +29,24 @@ fn request(url: &str) -> JsonValue {
     response.json()
 }
 
+fn get_time_ago(time: f64) -> String {
+    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as f64;
+    let minutes = (now - time) / 60f64;
+    if minutes < 60f64 {
+        return format!("{} minutes ago", minutes.round());
+    }
+    let hours = minutes / 60f64;
+    if hours < 24f64 {
+        return format!("{} hours ago", hours.round());
+    }
+    let days = hours / 24f64;
+    if days < 30f64 {
+        return format!("{} days ago", days.round());
+    }
+    let years = days / 365f64;
+    return format!("{} years ago", years.round());
+}
+
 fn fetch_item(id: f64) -> JsonValue {
     let response = send_http_request_with_headers(&format!("{}/item/{}.json", HN_API_URL, id), headers());
     response.json()
@@ -36,6 +55,8 @@ fn fetch_item(id: f64) -> JsonValue {
 fn get_item(id: f64) -> JsonValue {
     let mut item = fetch_item(id);
     let item_map = item.as_object_mut();
+    let time = item_map.get(&"time".to_owned()).expect("item doesn't have time").as_number();
+    item_map.insert("relative_time".to_owned(),JsonValue::String(get_time_ago(time)));
     let kids = match item_map.get("kids") {
         Some(value) => value.as_array(),
         None => return item
@@ -91,11 +112,16 @@ fn map_id_to_objects(ids: Vec<f64>, fetch_kids: bool) -> JsonValue {
         return JsonValue::Null;
     }
     let mut items = get_items(&ids);
-    if !fetch_kids {
-        return items;
-    }
     for item in items.as_array_mut() {
         let item = item.as_object_mut();
+
+        let time = item.get(&"time".to_owned()).expect("item doesn't have time").as_number();
+        item.insert("relative_time".to_owned(),JsonValue::String(get_time_ago(time)));
+
+        if !fetch_kids {
+            continue;
+        }
+        
         let kids = match item.get("kids") {
             Some(value) => value.as_array(),
             None => continue
