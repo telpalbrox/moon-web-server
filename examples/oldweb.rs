@@ -207,7 +207,7 @@ struct SingletonHnClient {
     inner: Arc<Mutex<HnClient>>,
 }
 
-fn oldweb(server: &mut HttpServer) {
+fn oldweb(server: &mut HttpServer<()>) {
     server.get("/hn", &|_req, mut res, _| {
         html(&mut res);
         let client = HnClient::new();
@@ -252,7 +252,7 @@ fn oldweb(server: &mut HttpServer) {
 }
 
 fn main() {
-    let mut server = HttpServer::new();
+    let mut server = HttpServer::new(());
     oldweb(&mut server);
     server.start();
 }

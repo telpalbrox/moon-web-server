@@ -5,20 +5,19 @@ use std::env;
 use std::io::prelude::*;
 use std::net::TcpListener;
 use std::sync::{Arc, Mutex};
-use std::collections::HashMap;
 
 use super::HttpRequest;
 
-type State = Arc<Mutex<HashMap<String, String>>>;
-type RouteHandler = dyn Fn(HttpRequest, &mut HttpResponse, State) -> () + Send + Sync;
+type State<T> = Arc<Mutex<T>>;
+type RouteHandler<T> = dyn Fn(HttpRequest, &mut HttpResponse, State<T>) -> () + Send + Sync;
 
-pub struct Route {
+pub struct Route<T> {
     pub method: String,
     pub uri: String,
-    pub handler: Arc<RouteHandler>,
+    pub handler: Arc<RouteHandler<T>>,
 }
 
-impl Route {
+impl<T> Route<T> {
     pub fn matches_uri(&self, uri: &String) -> bool {
         // remove query part of the url
         let uri: String = uri.split('?').take(1).collect();
@@ -57,28 +56,28 @@ impl Route {
     }
 }
 
-pub struct HttpServer {
-    routes: Arc<Vec<Route>>,
-    state: State
+pub struct HttpServer<T: Send + Sync + 'static> {
+    routes: Arc<Vec<Route<T>>>,
+    state: Arc<Mutex<T>>
 }
 
-impl HttpServer {
-    pub fn new() -> HttpServer {
+impl<T: Send + Sync> HttpServer<T> {
+    pub fn new(state: T) -> HttpServer<T> {
         HttpServer {
             routes: Arc::new(Vec::new()),
-            state: Arc::new(Mutex::new(HashMap::new()))
+            state: Arc::new(Mutex::new(state))
         }
     }
 
-    pub fn state(&self) -> State {
-        self.state.clone()
+    pub fn state(&self) -> State<T> {
+        Arc::clone(&self.state)
     }
 
-    pub fn add_route(&mut self, route: Route) {
+    pub fn add_route(&mut self, route: Route<T>) {
         Arc::get_mut(&mut self.routes).unwrap().push(route);
     }
 
-    pub fn get(&mut self, uri: &str, handler: &'static RouteHandler) {
+    pub fn get(&mut self, uri: &str, handler: &'static RouteHandler<T>) {
         let route = Route {
             uri: uri.to_owned(),
             method: "GET".to_owned(),
@@ -98,7 +97,7 @@ impl HttpServer {
         for stream in listener.incoming() {
             let mut stream = stream.unwrap();
             let routes = Arc::clone(&self.routes);
-            let state = Arc::clone(&self.state);
+            let mutex = Arc::clone(&self.state);
 
             pool.execute(move || {
                 routes.len();
@@ -123,7 +122,7 @@ impl HttpServer {
                         let handler = &route.handler;
                         route.add_params(&mut request);
                         let mut response = HttpResponse::new();
-                        handler(request, &mut response, state);
+                        handler(request, &mut response, mutex);
                         response
                     }
                     None => {
@@ -150,7 +149,7 @@ mod tests {
 
     #[test]
     fn basic_route_match() {
-        let route = Route {
+        let route: Route<()> = Route {
             method: String::from("GET"),
             uri: String::from("/test"),
             handler: Arc::new(|_, _, _| ()),
@@ -160,7 +159,7 @@ mod tests {
 
     #[test]
     fn route_with_parameter_match() {
-        let route = Route {
+        let route: Route<()> = Route {
             method: String::from("GET"),
             uri: String::from("/test/:test_param"),
             handler: Arc::new(|_, _, _| ()),
@@ -171,7 +170,7 @@ mod tests {
 
     #[test]
     fn get_params_from_route() {
-        let route = Route {
+        let route: Route<()> = Route {
             method: String::from("GET"),
             uri: String::from("/test/:test_param"),
             handler: Arc::new(|_, _, _| ()),

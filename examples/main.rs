@@ -13,7 +13,7 @@ fn read_file(path: &'static str) -> String {
 }
 
 fn main() {
-    let mut server = HttpServer::new();
+    let mut server = HttpServer::new(HashMap::new());
 
     server.add_route(Route {
         method: String::from("GET"),
