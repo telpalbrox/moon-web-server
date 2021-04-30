@@ -4,8 +4,8 @@ use webserver::json::{JsonValue};
 use webserver::templating::render_with_partials;
 use std::fs;
 use std::collections::HashMap;
-use std::{mem, thread};
-use std::sync::{mpsc::channel, Arc, Mutex, Once};
+use std::thread;
+use std::sync::{mpsc::channel, Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 fn read_file(path: &'static str) -> String {
@@ -208,7 +208,7 @@ struct SingletonHnClient {
 }
 
 fn oldweb(server: &mut HttpServer) {
-    server.get("/hn", &|_req, mut res| {
+    server.get("/hn", &|_req, mut res, _| {
         html(&mut res);
         let client = HnClient::new();
         let hn_response = client.get_top_stories();
@@ -224,7 +224,7 @@ fn oldweb(server: &mut HttpServer) {
         res.set_body(render_with_partials(&layout, &JsonValue::Object(context), &partials));
     });
 
-    server.get("/hn/:id", &|req, res| {
+    server.get("/hn/:id", &|req, res, _| {
         let id = match req.params.get("id") {
             Some(id) => id,
             None => panic!("hn id not found")

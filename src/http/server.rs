@@ -4,11 +4,13 @@ use super::HttpResponse;
 use std::env;
 use std::io::prelude::*;
 use std::net::TcpListener;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
+use std::collections::HashMap;
 
 use super::HttpRequest;
 
-type RouteHandler = dyn Fn(HttpRequest, &mut HttpResponse) -> () + Send + Sync;
+type State = Arc<Mutex<HashMap<String, String>>>;
+type RouteHandler = dyn Fn(HttpRequest, &mut HttpResponse, State) -> () + Send + Sync;
 
 pub struct Route {
     pub method: String,
@@ -57,13 +59,19 @@ impl Route {
 
 pub struct HttpServer {
     routes: Arc<Vec<Route>>,
+    state: State
 }
 
 impl HttpServer {
     pub fn new() -> HttpServer {
         HttpServer {
             routes: Arc::new(Vec::new()),
+            state: Arc::new(Mutex::new(HashMap::new()))
         }
+    }
+
+    pub fn state(&self) -> State {
+        self.state.clone()
     }
 
     pub fn add_route(&mut self, route: Route) {
@@ -90,6 +98,7 @@ impl HttpServer {
         for stream in listener.incoming() {
             let mut stream = stream.unwrap();
             let routes = Arc::clone(&self.routes);
+            let state = Arc::clone(&self.state);
 
             pool.execute(move || {
                 routes.len();
@@ -114,7 +123,7 @@ impl HttpServer {
                         let handler = &route.handler;
                         route.add_params(&mut request);
                         let mut response = HttpResponse::new();
-                        handler(request, &mut response);
+                        handler(request, &mut response, state);
                         response
                     }
                     None => {
@@ -144,7 +153,7 @@ mod tests {
         let route = Route {
             method: String::from("GET"),
             uri: String::from("/test"),
-            handler: Arc::new(|_, _| ()),
+            handler: Arc::new(|_, _, _| ()),
         };
         assert_eq!(route.matches_uri(&"/test?query=1".to_owned()), true);
     }
@@ -154,7 +163,7 @@ mod tests {
         let route = Route {
             method: String::from("GET"),
             uri: String::from("/test/:test_param"),
-            handler: Arc::new(|_, _| ()),
+            handler: Arc::new(|_, _, _| ()),
         };
         assert_eq!(route.matches_uri(&"/test".to_owned()), false);
         assert_eq!(route.matches_uri(&"/test/test".to_owned()), true);
@@ -165,7 +174,7 @@ mod tests {
         let route = Route {
             method: String::from("GET"),
             uri: String::from("/test/:test_param"),
-            handler: Arc::new(|_, _| ()),
+            handler: Arc::new(|_, _, _| ()),
         };
         let mut request = HttpRequest::new_with_uri("/test/some_param".to_owned());
         route.add_params(&mut request);

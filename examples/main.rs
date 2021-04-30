@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::fs;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use webserver::http::send_http_request;
 use webserver::http::server::Route;
 use webserver::http::HttpServer;
@@ -18,7 +18,7 @@ fn main() {
     server.add_route(Route {
         method: String::from("GET"),
         uri: String::from("/"),
-        handler: Arc::new(|request, response| {
+        handler: Arc::new(|request, response, _| {
             response.add_header("x-test".to_owned(), "more test".to_owned());
             response.set_body(format!("lol request to {}", request.uri));
         }),
@@ -26,14 +26,14 @@ fn main() {
 
     server.get(
         "/id/:id",
-        &|request: HttpRequest, response: &mut HttpResponse| {
+        &|request: HttpRequest, response: &mut HttpResponse, _| {
             response.set_body(format!("url id: {}", request.params.get("id").unwrap()));
         },
     );
 
     server.get(
         "/query",
-        &|request: HttpRequest, response: &mut HttpResponse| {
+        &|request: HttpRequest, response: &mut HttpResponse, _| {
             response.set_body(format!(
                 "query param key: {}",
                 request
@@ -46,7 +46,7 @@ fn main() {
 
     server.get(
         "/hello",
-        &|request: HttpRequest, response: &mut HttpResponse| {
+        &|request: HttpRequest, response: &mut HttpResponse, _| {
             response
                 .headers_mut()
                 .push(("Content-Type".to_owned(), "text/html".to_owned()));
@@ -69,7 +69,7 @@ fn main() {
 
     server.get(
         "/headers",
-        &|request: HttpRequest, response: &mut HttpResponse| {
+        &|request: HttpRequest, response: &mut HttpResponse, _| {
             response
                 .headers_mut()
                 .push(("Content-Type".to_owned(), "text/html".to_owned()));
@@ -83,9 +83,15 @@ fn main() {
         },
     );
 
+    let mutex = server.state();
+    let mut state = mutex.lock().unwrap();
+    state.insert(String::from("visits"), String::from("0"));
+    drop(state);
+    drop(mutex);
+
     server.get(
         "/httpreq",
-        &|_request: HttpRequest, response: &mut HttpResponse| {
+        &|_request: HttpRequest, response: &mut HttpResponse, _| {
             response
                 .headers_mut()
                 .push(("Content-Type".to_owned(), "application/json".to_owned()));
@@ -93,6 +99,22 @@ fn main() {
             response.set_body(bin_response.body);
         },
     );
+
+
+
+    server.get(
+        "/visits",
+        &|_request: HttpRequest, response: &mut HttpResponse, state: Arc<Mutex<HashMap<String, String>>>| {
+            let mut state = state.lock().unwrap();
+            let mut visits: u64 = state.get("visits").unwrap().parse().unwrap();
+            visits = visits + 1;
+            state.insert(String::from("visits"), visits.to_string());
+
+
+            response.set_body(format!("visits: {}", visits.to_string()));
+        },
+    );
+
 
     server.start();
 }
