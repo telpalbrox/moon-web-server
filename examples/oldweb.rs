@@ -6,7 +6,7 @@ use std::fs;
 use std::collections::HashMap;
 use std::thread;
 use std::sync::{mpsc::channel, Arc, Mutex};
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{SystemTime, UNIX_EPOCH, Duration};
 
 fn read_file(path: &'static str) -> String {
     fs::read_to_string(path).unwrap()
@@ -32,6 +32,20 @@ fn request(url: &str) -> JsonValue {
     response.json()
 }
 
+fn get_max_id() -> u64 {
+    let response = send_http_request_with_headers(&format!("{}/maxitem.json", HN_API_URL), headers());
+    response.json().as_number() as u64
+}
+
+fn get_updates() -> JsonValue {
+    let response = send_http_request_with_headers(&format!("{}/updates.json", HN_API_URL), headers());
+    response.json()
+}
+
+fn get_changed_items() -> Vec<u64> {
+    get_updates().as_object().get("items").unwrap().as_array().into_iter().map(|value| value.as_number() as u64).collect()
+}
+
 fn get_time_ago(time: f64) -> String {
     let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as f64;
     let minutes = (now - time) / 60f64;
@@ -53,11 +67,13 @@ fn get_time_ago(time: f64) -> String {
 fn fetch_item(items_cache: &ItemsCacheMutex, id: u64) -> JsonValue {
     let item_cache_read = items_cache.lock().unwrap();
     if item_cache_read.contains_key(&id) {
+        println!("Cache hit for {}", id);
         return item_cache_read.get(&id).unwrap().clone();
     }
     drop(item_cache_read);
     let response = send_http_request_with_headers(&format!("{}/item/{}.json", HN_API_URL, id), headers());
     let item = response.json();
+    println!("fetched item {}", id);
     let clone = item.clone();
     let mut item_cache = items_cache.lock().unwrap();
     item_cache.insert(id, item);
@@ -176,6 +192,30 @@ fn get_top_stories(items_cache: &ItemsCacheMutex) -> JsonValue {
     get_stories(items_cache, "topstories")
 }
 
+fn warmup(server: &HttpServer<ItemsCache>) {
+    let items_cache = server.state().clone();
+    thread::spawn(move || {
+        let max_id = get_max_id();
+        let low_id = max_id - 4000;
+        for i in low_id..max_id {
+            fetch_item(&items_cache, i);
+        }
+    });
+}
+
+fn watch_changed_items(server: &HttpServer<ItemsCache>) {
+    let items_cache = server.state().clone();
+    thread::spawn(move || {
+        loop {
+            println!("fetching updates");
+            for id in get_changed_items() {
+                fetch_item(&items_cache, id);
+            }
+            thread::sleep(Duration::from_secs(60));
+        }
+    });
+}
+
 fn oldweb(server: &mut HttpServer<ItemsCache>) {
     server.get("/hn", &|_req, mut res, items_cache| {
         html(&mut res);
@@ -220,6 +260,8 @@ fn oldweb(server: &mut HttpServer<ItemsCache>) {
 fn main() {
     let items_cache = HashMap::new();
     let mut server = HttpServer::new(items_cache);
+    watch_changed_items(&server);
+    warmup(&server);
     oldweb(&mut server);
     server.start();
 }
