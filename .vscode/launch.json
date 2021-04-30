@@ -44,6 +44,24 @@
         {
             "type": "lldb",
             "request": "launch",
+            "name": "Debug executable 'oldweb'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example",
+                    "oldweb"
+                ],
+                "filter": {
+                    "name": "oldweb",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
             "name": "Debug unit tests in executable 'main'",
             "cargo": {
                 "args": [

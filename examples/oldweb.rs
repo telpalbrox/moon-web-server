@@ -60,6 +60,11 @@ impl HnClient {
     }
 
     fn fetch_item(item_cache: &Arc<Mutex<HashMap<u64, JsonValue>>>, id: u64) -> JsonValue {
+        let item_cache_read = item_cache.lock().unwrap();
+        if item_cache_read.contains_key(&id) {
+            return item_cache_read.get(&id).unwrap().clone();
+        }
+        drop(item_cache_read);
         let response = send_http_request_with_headers(&format!("{}/item/{}.json", HN_API_URL, id), HnClient::headers());
         let item = response.json();
         let clone = item.clone();
@@ -70,15 +75,7 @@ impl HnClient {
     }
 
     fn get_item(&self, id: u64) -> JsonValue {
-        let mutex = self.item_cache.clone();
-        let item_cache = mutex.lock().unwrap();
-        if item_cache.contains_key(&id) {
-            return item_cache.get(&id).unwrap().clone();
-        }
-        drop(item_cache);
-        drop(mutex);
-        let mutex = self.item_cache.clone();
-        let mut item = HnClient::fetch_item(&mutex, id);
+        let mut item = HnClient::fetch_item(&self.item_cache, id);
 
         let item_map = item.as_object_mut();
         let time = item_map.get(&"time".to_owned()).expect("item doesn't have time").as_number();
@@ -108,18 +105,7 @@ impl HnClient {
         let stories_len = ids.len();
         for (i, id) in ids.into_iter().enumerate() {
             let tx = tx.clone();
-            let id = id.clone();
-            dbg!("before first mutex {}", id);
-            let mutex = self.item_cache.clone();
-            let item_cache = mutex.lock().unwrap();
-            if item_cache.contains_key(&id) {
-                tx.send((i, item_cache.get(&id).unwrap().clone())).expect("Error sending cached item");
-                drop(item_cache);
-                continue;
-            }
-            drop(item_cache);
-            drop(mutex);
-            dbg!("Before second mutex {}", id);
+            let id = id.clone(); 
             let mutex = self.item_cache.clone();
             joins.push(thread::spawn(move || {
                 let item = HnClient::fetch_item(&mutex, id);
@@ -207,12 +193,12 @@ struct SingletonHnClient {
     inner: Arc<Mutex<HnClient>>,
 }
 
-fn oldweb(server: &mut HttpServer<()>) {
-    server.get("/hn", &|_req, mut res, _| {
+fn oldweb(server: &mut HttpServer<HnClient>) {
+    server.get("/hn", &|_req, mut res, client_mutex| {
         html(&mut res);
-        let client = HnClient::new();
+        let client = client_mutex.lock().unwrap();
         let hn_response = client.get_top_stories();
-        dbg!(client);
+        drop(client);
         let mut context = HashMap::new();
         context.insert("stories".to_owned(), hn_response);
         let layout = read_file("./examples/templates/oldweb/layout.hbs");
@@ -224,7 +210,7 @@ fn oldweb(server: &mut HttpServer<()>) {
         res.set_body(render_with_partials(&layout, &JsonValue::Object(context), &partials));
     });
 
-    server.get("/hn/:id", &|req, res, _| {
+    server.get("/hn/:id", &|req, res, client_mutex| {
         let id = match req.params.get("id") {
             Some(id) => id,
             None => panic!("hn id not found")
@@ -237,8 +223,9 @@ fn oldweb(server: &mut HttpServer<()>) {
                 return;
             }
         };
-        let client = HnClient::new();
+        let client = client_mutex.lock().unwrap();
         let item = client.get_item(id);
+        drop(client);
         let layout = read_file("./examples/templates/oldweb/layout.hbs");
         let hnitem = read_file("./examples/templates/oldweb/hnitem.hbs");
         let hncomment = read_file("./examples/templates/oldweb/partials/hncomment.hbs");
@@ -252,7 +239,8 @@ fn oldweb(server: &mut HttpServer<()>) {
 }
 
 fn main() {
-    let mut server = HttpServer::new(());
+    let hn_client = HnClient::new();
+    let mut server = HttpServer::new(hn_client);
     oldweb(&mut server);
     server.start();
 }
