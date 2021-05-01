@@ -64,13 +64,14 @@ fn get_time_ago(time: f64) -> String {
     return format!("{} years ago", years.round());
 }
 
-fn fetch_item(items_cache: &ItemsCacheMutex, id: u64) -> JsonValue {
-    let item_cache_read = items_cache.lock().unwrap();
-    if item_cache_read.contains_key(&id) {
-        println!("Cache hit for {}", id);
-        return item_cache_read.get(&id).unwrap().clone();
+fn fetch_item(items_cache: &ItemsCacheMutex, id: u64, force: bool) -> JsonValue {
+    if !force {
+        let item_cache_read = items_cache.lock().unwrap();
+        if item_cache_read.contains_key(&id) {
+            println!("Cache hit for {}", id);
+            return item_cache_read.get(&id).unwrap().clone();
+        }
     }
-    drop(item_cache_read);
     let response = send_http_request_with_headers(&format!("{}/item/{}.json", HN_API_URL, id), headers());
     let item = response.json();
     println!("fetched item {}", id);
@@ -82,7 +83,7 @@ fn fetch_item(items_cache: &ItemsCacheMutex, id: u64) -> JsonValue {
 }
 
 fn get_item(items_cache: ItemsCacheMutex, id: u64) -> JsonValue {
-    let mut item = fetch_item(&items_cache, id);
+    let mut item = fetch_item(&items_cache, id, false);
 
     let item_map = item.as_object_mut();
     let time = item_map.get(&"time".to_owned()).expect("item doesn't have time").as_number();
@@ -115,7 +116,7 @@ fn get_items(items_cache: &ItemsCacheMutex, ids: &Vec<u64>) -> JsonValue {
         let id = id.clone(); 
         let mutex = items_cache.clone();
         joins.push(thread::spawn(move || {
-            let item = fetch_item(&mutex, id);
+            let item = fetch_item(&mutex, id, false);
             drop(mutex);
             tx.send((i, item)).expect("Error sending item");
         }));
@@ -174,17 +175,13 @@ fn map_id_to_objects(items_cache: &ItemsCacheMutex, ids: Vec<u64>, fetch_kids: b
     return items;
 }
 
+fn fetch_stories(path: &str) -> JsonValue {
+    request(&format!("{}/{}.json", HN_API_URL, path))
+}
+
 fn get_stories(items_cache: &ItemsCacheMutex, path: &str) -> JsonValue {
-    let stories_ids = match request(&format!("{}/{}.json", HN_API_URL, path)) {
-        JsonValue::Array(ids) => ids,
-        _ => panic!("expected array from api")
-    };
-    let stories_ids: Vec<u64> = stories_ids.into_iter().take(30).map(|id| {
-        return match id {
-            JsonValue::Number(id) => id as u64,
-            _ => panic!("expected ids to be numbers")
-        }
-    }).collect();
+    let stories_ids = fetch_stories(path);
+    let stories_ids: Vec<u64> = stories_ids.as_array().into_iter().take(30).map(|id| id.as_number() as u64).collect();
     map_id_to_objects(items_cache, stories_ids, false)
 }
 
@@ -195,10 +192,10 @@ fn get_top_stories(items_cache: &ItemsCacheMutex) -> JsonValue {
 fn warmup(server: &HttpServer<ItemsCache>) {
     let items_cache = server.state().clone();
     thread::spawn(move || {
-        let max_id = get_max_id();
-        let low_id = max_id - 4000;
-        for i in low_id..max_id {
-            fetch_item(&items_cache, i);
+        let top_stories = fetch_stories("topstories");
+        let kids: Vec<u64> = top_stories.as_array().into_iter().map(|value| value.as_number() as u64).collect();
+        for id in kids {
+            fetch_item(&items_cache, id, false);
         }
     });
 }
@@ -209,9 +206,28 @@ fn watch_changed_items(server: &HttpServer<ItemsCache>) {
         loop {
             println!("fetching updates");
             for id in get_changed_items() {
-                fetch_item(&items_cache, id);
+                fetch_item(&items_cache, id, true);
             }
             thread::sleep(Duration::from_secs(60));
+        }
+    });
+}
+
+fn watch_new_items(server: &HttpServer<ItemsCache>) {
+    let items_cache = server.state().clone();
+    thread::spawn(move || {
+        let mut max_id = get_max_id();
+        loop {
+            thread::sleep(Duration::from_secs(20));
+            println!("fetching new items");
+            let new_max_id = get_max_id();
+            if new_max_id == max_id {
+                continue;
+            }
+            for id in max_id + 1..new_max_id + 1 {
+                fetch_item(&items_cache, id, false);
+            }
+            max_id = new_max_id;
         }
     });
 }
@@ -262,6 +278,7 @@ fn main() {
     let mut server = HttpServer::new(items_cache);
     watch_changed_items(&server);
     warmup(&server);
+    watch_new_items(&server);
     oldweb(&mut server);
     server.start();
 }
