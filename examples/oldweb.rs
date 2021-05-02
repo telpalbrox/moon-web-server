@@ -224,8 +224,13 @@ fn watch_new_items(server: &HttpServer<ItemsCache>) {
         let mut max_id = get_max_id();
         loop {
             thread::sleep(Duration::from_secs(20));
-            println!("fetching new items");
+            println!("fetching new items frmo i");
             let new_max_id = get_max_id();
+            if new_max_id < 27017975 {
+                // not possible to get something older than this id
+                eprintln!("Weird value returned by max item id: {}, not fetching updates", new_max_id);
+                continue;
+            }
             if new_max_id == max_id {
                 continue;
             }
