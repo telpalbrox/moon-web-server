@@ -34,7 +34,7 @@ fn request(url: &str) -> JsonValue {
 
 fn get_max_id() -> u64 {
     let response = send_http_request_with_headers(&format!("{}/maxitem.json", HN_API_URL), headers());
-    response.json().as_number() as u64
+    response.json().as_number().expect("max_id is a number") as u64
 }
 
 fn get_updates() -> JsonValue {
@@ -43,7 +43,12 @@ fn get_updates() -> JsonValue {
 }
 
 fn get_changed_items() -> Vec<u64> {
-    get_updates().as_object().get("items").unwrap().as_array().into_iter().map(|value| value.as_number() as u64).collect()
+    match get_updates().as_object() {
+        Some(updates) => {
+            return updates.get("items").unwrap().as_array().expect("updates is an array").into_iter().map(|value| value.as_number().expect("value is a number") as u64).collect()
+        },
+        None => return Vec::new()
+    };
 }
 
 fn get_time_ago(time: f64) -> String {
@@ -85,11 +90,11 @@ fn fetch_item(items_cache: &ItemsCacheMutex, id: u64, force: bool) -> JsonValue 
 fn get_item(items_cache: ItemsCacheMutex, id: u64) -> JsonValue {
     let mut item = fetch_item(&items_cache, id, false);
 
-    let item_map = item.as_object_mut();
-    let time = item_map.get(&"time".to_owned()).expect("item doesn't have time").as_number();
+    let item_map = item.as_object_mut().expect("item is an object");
+    let time = item_map.get(&"time".to_owned()).expect("item doesn't have time").as_number().expect("time is a number");
     item_map.insert("relative_time".to_owned(),JsonValue::String(get_time_ago(time)));
     let kids = match item_map.get("kids") {
-        Some(value) => value.as_array(),
+        Some(value) => value.as_array().expect("kids is an array"),
         None => return item
     };
     if kids.is_empty() {
@@ -145,7 +150,7 @@ fn map_id_to_objects(items_cache: &ItemsCacheMutex, ids: Vec<u64>, fetch_kids: b
         return JsonValue::Null;
     }
     let mut items = get_items(&items_cache, &ids);
-    for item in items.as_array_mut() {
+    for item in items.as_array_mut().expect("items is an array") {
         let item = match item {
             JsonValue::Object(item) => item,
             _ => {
@@ -153,7 +158,7 @@ fn map_id_to_objects(items_cache: &ItemsCacheMutex, ids: Vec<u64>, fetch_kids: b
             }
         };
 
-        let time = item.get(&"time".to_owned()).expect("item doesn't have time").as_number();
+        let time = item.get(&"time".to_owned()).expect("item doesn't have time").as_number().expect("time is a number");
         item.insert("relative_time".to_owned(),JsonValue::String(get_time_ago(time)));
 
         if !fetch_kids {
@@ -161,7 +166,7 @@ fn map_id_to_objects(items_cache: &ItemsCacheMutex, ids: Vec<u64>, fetch_kids: b
         }
         
         let kids = match item.get("kids") {
-            Some(value) => value.as_array(),
+            Some(value) => value.as_array().expect("kids is an array"),
             None => continue
         };
         if kids.is_empty() {
@@ -186,7 +191,7 @@ fn fetch_stories(path: &str) -> JsonValue {
 
 fn get_stories(items_cache: &ItemsCacheMutex, path: &str) -> JsonValue {
     let stories_ids = fetch_stories(path);
-    let stories_ids: Vec<u64> = stories_ids.as_array().into_iter().take(30).map(|id| id.as_number() as u64).collect();
+    let stories_ids: Vec<u64> = stories_ids.as_array().expect("stories_ids is an array").into_iter().take(30).map(|id| id.as_number().expect("id is a number") as u64).collect();
     map_id_to_objects(items_cache, stories_ids, false)
 }
 
@@ -198,7 +203,7 @@ fn warmup(server: &HttpServer<ItemsCache>) {
     let items_cache = server.state().clone();
     thread::spawn(move || {
         let top_stories = fetch_stories("topstories");
-        let kids: Vec<u64> = top_stories.as_array().into_iter().map(|value| value.as_number() as u64).collect();
+        let kids: Vec<u64> = top_stories.as_array().expect("top_stories is an array").into_iter().map(|value| value.as_number().expect("value is a number") as u64).collect();
         for id in kids {
             map_id_to_objects(&items_cache, vec![id], true);
         }
@@ -224,7 +229,7 @@ fn watch_new_items(server: &HttpServer<ItemsCache>) {
         let mut max_id = get_max_id();
         loop {
             thread::sleep(Duration::from_secs(20));
-            println!("fetching new items frmo i");
+            println!("fetching new items from {}", max_id);
             let new_max_id = get_max_id();
             if new_max_id < 27017975 {
                 // not possible to get something older than this id

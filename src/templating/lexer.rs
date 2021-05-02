@@ -10,10 +10,10 @@ pub struct MustacheLikeLexer {
 #[derive(Debug, PartialEq, Clone)]
 pub enum MustacheLikeToken {
     Text(String),
-    Name(String, bool),
-    Partial(String),
-    OpenTag(String, bool),
-    CloseTag(String),
+    Name(String, bool), // name, escape
+    Partial(String), // name
+    OpenTag(String, bool), // tag_name, inverted
+    CloseTag(String), // tag_name
 }
 
 impl MustacheLikeLexer {

@@ -48,48 +48,48 @@ impl JsonValue {
 }
 
 impl JsonValue {
-    pub fn as_object(&self) -> &HashMap<String, JsonValue> {
+    pub fn as_object(&self) -> Option<&HashMap<String, JsonValue>> {
         match self {
             Self::Object(map) => {
-                return map;
+                return Some(map);
             },
-            _ => panic!("Not an object")
+            _ => None
         }
     }
 
-    pub fn as_object_mut(&mut self) -> &mut HashMap<String, JsonValue> {
+    pub fn as_object_mut(&mut self) -> Option<&mut HashMap<String, JsonValue>> {
         match self {
             Self::Object(map) => {
-                return map;
+                return Some(map);
             },
-            _ => panic!("Not an object")
+            _ => None
         }
     }
 
-    pub fn as_number(&self) -> f64 {
+    pub fn as_number(&self) -> Option<f64> {
         match self {
             Self::Number(number) => {
-                return *number;
+                return Some(*number);
             },
-            _ => panic!("Not a number")
+            _ => None
         }
     }
 
-    pub fn as_array(&self) -> &Vec<JsonValue> {
+    pub fn as_array(&self) -> Option<&Vec<JsonValue>> {
         match self {
             Self::Array(array) => {
-                return array;
+                return Some(array);
             },
-            _ => panic!("Not an array")
+            _ => None
         }
     }
 
-    pub fn as_array_mut(&mut self) -> &mut Vec<JsonValue> {
+    pub fn as_array_mut(&mut self) -> Option<&mut Vec<JsonValue>> {
         match self {
             Self::Array(array) => {
-                return array;
+                return Some(array);
             },
-            _ => panic!("Not an array")
+            _ => None
         }
     }
 }
