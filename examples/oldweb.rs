@@ -195,7 +195,7 @@ fn warmup(server: &HttpServer<ItemsCache>) {
         let top_stories = fetch_stories("topstories");
         let kids: Vec<u64> = top_stories.as_array().into_iter().map(|value| value.as_number() as u64).collect();
         for id in kids {
-            fetch_item(&items_cache, id, false);
+            map_id_to_objects(&items_cache, vec![id], true);
         }
     });
 }
@@ -270,6 +270,10 @@ fn oldweb(server: &mut HttpServer<ItemsCache>) {
         partials.insert("hncomment".to_owned(), hncomment);
         partials.insert("hnitemsummary".to_owned(), hnitemsummary);
         res.set_body(render_with_partials(&layout, &item, &partials));
+    });
+
+    server.get("/hn/cache-size", &|_, res, items_cache: ItemsCacheMutex| {
+        res.set_body(items_cache.lock().unwrap().len().to_string());
     });
 }
 
