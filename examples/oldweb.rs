@@ -146,7 +146,12 @@ fn map_id_to_objects(items_cache: &ItemsCacheMutex, ids: Vec<u64>, fetch_kids: b
     }
     let mut items = get_items(&items_cache, &ids);
     for item in items.as_array_mut() {
-        let item = item.as_object_mut();
+        let item = match item {
+            JsonValue::Object(item) => item,
+            _ => {
+                continue;
+            }
+        };
 
         let time = item.get(&"time".to_owned()).expect("item doesn't have time").as_number();
         item.insert("relative_time".to_owned(),JsonValue::String(get_time_ago(time)));
