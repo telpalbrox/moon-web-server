@@ -125,10 +125,16 @@ impl MustacheLikeNode {
                         JsonValue::Number(_) => {
                             return render();
                         },
-                        _ => todo!("Handle map section for {:?} value", value),
+                        _ => {
+                            eprintln!("Handle map {:?} section for {:?} value for tag name {:?}", map, value, tag_name);
+                            return String::default();
+                        },
                     }
                 },
-                _ => todo!("Handle section for {:?} value", context),
+                _ => {
+                    eprintln!("Handle section {:?} for {:?} value", tag_name, context);
+                    return String::default();
+                },
             },
             Self::Partial(name) => {
                 let partial_src = partials.get(name);
