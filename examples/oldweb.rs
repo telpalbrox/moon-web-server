@@ -79,6 +79,13 @@ fn fetch_item(items_cache: &ItemsCacheMutex, id: u64, force: bool) -> JsonValue 
     }
     let response = send_http_request_with_headers(&format!("{}/item/{}.json", HN_API_URL, id), headers());
     let item = response.json();
+    let item = match item {
+        JsonValue::Object(_) => item,
+        _ => {
+            eprintln!("API item id {} is not an object {:?}", id, item);
+            return JsonValue::Null;
+        }
+    };
     println!("fetched item {}", id);
     let clone = item.clone();
     let mut item_cache = items_cache.lock().unwrap();
