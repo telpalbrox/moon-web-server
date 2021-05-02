@@ -65,7 +65,10 @@ impl MustacheLikeNode {
                 match context {
                     JsonValue::Object(map) => {
                         let value = match map.get(name) {
-                            None => return String::from(""),
+                            None => {
+                                eprintln!("Variable {:?} not found in object {:?}", name, map);
+                                return String::default();
+                            },
                             Some(value) => value,
                         };
                         match value {
@@ -78,12 +81,15 @@ impl MustacheLikeNode {
                             },
                             JsonValue::Boolean(value) => return value.to_string(),
                             JsonValue::Number(value) => return value.to_string(),
-                            _ => return String::from(""),
+                            _ => {
+                                eprintln!("MustacheLikeNode error: Cannot print variable {:?} with value {:?} for {:?} context", name, value, context);
+                                return String::default();
+                            },
                         }
                     }
                     _ => {
                         eprintln!("MustacheLikeNode error: Handle name {:?} for {:?} value", name, context);
-                        return String::from("");
+                        return String::default();
                     },
                 };
             }
@@ -139,7 +145,10 @@ impl MustacheLikeNode {
             Self::Partial(name) => {
                 let partial_src = partials.get(name);
                 match partial_src {
-                    None => return String::from(""),
+                    None => {
+                        eprintln!("Partial not found {:?}", name);
+                        return String::default();
+                    },
                     Some(partial_src) => {
                         return render_with_partials(partial_src, context, partials);
                     }
