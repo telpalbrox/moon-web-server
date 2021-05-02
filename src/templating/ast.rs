@@ -81,7 +81,10 @@ impl MustacheLikeNode {
                             _ => return String::from(""),
                         }
                     }
-                    _ => todo!("Handle name {:?} for {:?} value", name, context),
+                    _ => {
+                        eprintln!("MustacheLikeNode error: Handle name {:?} for {:?} value", name, context);
+                        return String::from("");
+                    },
                 };
             }
             Self::Section(tag_name, nodes, inverted) => match context {
