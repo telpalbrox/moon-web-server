@@ -97,6 +97,10 @@ fn fetch_item(items_cache: &ItemsCacheMutex, id: u64, force: bool) -> JsonValue 
 fn get_item(items_cache: ItemsCacheMutex, id: u64) -> JsonValue {
     let mut item = fetch_item(&items_cache, id, false);
 
+    if item == JsonValue::Null {
+        return item;
+    }
+
     let item_map = item.as_object_mut().expect("item is an object");
     let time = item_map.get(&"time".to_owned()).expect("item doesn't have time").as_number().expect("time is a number");
     item_map.insert("relative_time".to_owned(),JsonValue::String(get_time_ago(time)));
@@ -283,6 +287,13 @@ fn oldweb(server: &mut HttpServer<ItemsCache>) {
             }
         };
         let item = get_item(items_cache, id);
+
+        if item == JsonValue::Null {
+            res.set_status_code(500);
+            res.set_body(String::from("Error fetching item from HN API"));
+            return;
+        }
+
         let layout = read_file("./examples/templates/oldweb/layout.hbs");
         let hnitem = read_file("./examples/templates/oldweb/hnitem.hbs");
         let hncomment = read_file("./examples/templates/oldweb/partials/hncomment.hbs");

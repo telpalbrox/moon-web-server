@@ -65,10 +65,7 @@ impl MustacheLikeNode {
                 match context {
                     JsonValue::Object(map) => {
                         let value = match map.get(name) {
-                            None => {
-                                eprintln!("Variable {:?} not found in object {:?}", name, map);
-                                return String::default();
-                            },
+                            None => return String::default(),
                             Some(value) => value,
                         };
                         match value {
@@ -132,13 +129,13 @@ impl MustacheLikeNode {
                             return render();
                         },
                         _ => {
-                            eprintln!("Handle map {:?} section for {:?} value for tag name {:?}", map, value, tag_name);
+                            eprintln!("MustacheLikeNode error: Handle map {:?} section for {:?} value for tag name {:?}", map, value, tag_name);
                             return String::default();
                         },
                     }
                 },
                 _ => {
-                    eprintln!("Handle section {:?} for {:?} value", tag_name, context);
+                    eprintln!("MustacheLikeNode error: Handle section {:?} for {:?} value", tag_name, context);
                     return String::default();
                 },
             },
