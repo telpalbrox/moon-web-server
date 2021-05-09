@@ -10,10 +10,10 @@ pub struct MustacheLikeLexer {
 #[derive(Debug, PartialEq, Clone)]
 pub enum MustacheLikeToken {
     Text(String),
-    Name(String, bool), // name, escape
-    Partial(String), // name
+    Name(String, bool),    // name, escape
+    Partial(String),       // name
     OpenTag(String, bool), // tag_name, inverted
-    CloseTag(String), // tag_name
+    CloseTag(String),      // tag_name
 }
 
 impl MustacheLikeLexer {
@@ -148,26 +148,29 @@ impl MustacheLikeLexer {
             match first_char {
                 '#' => {
                     let tag_name = text_inside_tag.chars().skip(1).collect();
-                    self.tokens.push(MustacheLikeToken::OpenTag(tag_name, false));
-                },
+                    self.tokens
+                        .push(MustacheLikeToken::OpenTag(tag_name, false));
+                }
                 '^' => {
                     let tag_name = text_inside_tag.chars().skip(1).collect();
                     self.tokens.push(MustacheLikeToken::OpenTag(tag_name, true));
-                },
+                }
                 '/' => {
                     let tag_name = text_inside_tag.chars().skip(1).collect();
                     self.tokens.push(MustacheLikeToken::CloseTag(tag_name));
-                },
+                }
                 '&' => {
                     let variable_name = text_inside_tag.chars().skip(1).collect();
-                    self.tokens.push(MustacheLikeToken::Name(variable_name, false));
-                },
+                    self.tokens
+                        .push(MustacheLikeToken::Name(variable_name, false));
+                }
                 '>' => {
                     let partial_name = text_inside_tag.chars().skip(1).collect();
                     self.tokens.push(MustacheLikeToken::Partial(partial_name));
-                },
+                }
                 _ => {
-                    self.tokens.push(MustacheLikeToken::Name(text_inside_tag, true));
+                    self.tokens
+                        .push(MustacheLikeToken::Name(text_inside_tag, true));
                 }
             }
         }
@@ -202,8 +205,7 @@ mod tests {
 
     #[test]
     fn lexer_tags() {
-        let lexer =
-            MustacheLikeLexer::new("Shown.\n{{#person}}\n  Never shown!\n{{/person}}");
+        let lexer = MustacheLikeLexer::new("Shown.\n{{#person}}\n  Never shown!\n{{/person}}");
         assert_eq!(
             lexer.run(),
             vec!(

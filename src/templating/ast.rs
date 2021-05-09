@@ -24,7 +24,7 @@ fn escape_html(string: &str) -> String {
 fn is_value_truthy(value: Option<&JsonValue>) -> bool {
     let value = match value {
         None => return false,
-        Some(value) => value
+        Some(value) => value,
     };
 
     match value {
@@ -33,7 +33,7 @@ fn is_value_truthy(value: Option<&JsonValue>) -> bool {
         JsonValue::String(value) => !value.is_empty(),
         JsonValue::Null => false,
         JsonValue::Object(value) => !value.is_empty(),
-        JsonValue::Number(value) => *value != 0f64
+        JsonValue::Number(value) => *value != 0f64,
     }
 }
 
@@ -46,7 +46,11 @@ pub enum MustacheLikeNode {
 }
 
 impl MustacheLikeNode {
-    pub fn render_section(nodes: &Vec<MustacheLikeNode>, context: &JsonValue, partials: &HashMap<String, String>) -> String {
+    pub fn render_section(
+        nodes: &Vec<MustacheLikeNode>,
+        context: &JsonValue,
+        partials: &HashMap<String, String>,
+    ) -> String {
         let mut result = String::new();
 
         for node in nodes {
@@ -75,19 +79,22 @@ impl MustacheLikeNode {
                                 } else {
                                     return String::from(value);
                                 }
-                            },
+                            }
                             JsonValue::Boolean(value) => return value.to_string(),
                             JsonValue::Number(value) => return value.to_string(),
                             _ => {
                                 eprintln!("MustacheLikeNode error: Cannot print variable {:?} with value {:?} for {:?} context", name, value, context);
                                 return String::default();
-                            },
+                            }
                         }
                     }
                     _ => {
-                        eprintln!("MustacheLikeNode error: Handle name {:?} for {:?} value", name, context);
+                        eprintln!(
+                            "MustacheLikeNode error: Handle name {:?} for {:?} value",
+                            name, context
+                        );
                         return String::default();
-                    },
+                    }
                 };
             }
             Self::Section(tag_name, nodes, inverted) => match context {
@@ -105,7 +112,7 @@ impl MustacheLikeNode {
 
                     let value = match value {
                         None => return render(),
-                        Some(value) => value
+                        Some(value) => value,
                     };
 
                     match value {
@@ -118,26 +125,31 @@ impl MustacheLikeNode {
                             }
                             let mut result = String::new();
                             for element in array {
-                                result.push_str(&MustacheLikeNode::render_section(nodes, &element, partials));
+                                result.push_str(&MustacheLikeNode::render_section(
+                                    nodes, &element, partials,
+                                ));
                             }
                             return result;
-                        },
+                        }
                         JsonValue::String(_) => {
                             return render();
-                        },
+                        }
                         JsonValue::Number(_) => {
                             return render();
-                        },
+                        }
                         _ => {
                             eprintln!("MustacheLikeNode error: Handle map {:?} section for {:?} value for tag name {:?}", map, value, tag_name);
                             return String::default();
-                        },
+                        }
                     }
-                },
+                }
                 _ => {
-                    eprintln!("MustacheLikeNode error: Handle section {:?} for {:?} value", tag_name, context);
+                    eprintln!(
+                        "MustacheLikeNode error: Handle section {:?} for {:?} value",
+                        tag_name, context
+                    );
                     return String::default();
-                },
+                }
             },
             Self::Partial(name) => {
                 let partial_src = partials.get(name);
@@ -145,7 +157,7 @@ impl MustacheLikeNode {
                     None => {
                         eprintln!("Partial not found {:?}", name);
                         return String::default();
-                    },
+                    }
                     Some(partial_src) => {
                         return render_with_partials(partial_src, context, partials);
                     }

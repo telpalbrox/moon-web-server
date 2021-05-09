@@ -27,17 +27,31 @@ impl Display for HttpParserError {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         match self {
             Self::LenghtError(length_error) => {
-                write!(f, "Expected char at index {} but input lenght is '{}'", length_error.index, length_error.length)
-            },
+                write!(
+                    f,
+                    "Expected char at index {} but input lenght is '{}'",
+                    length_error.index, length_error.length
+                )
+            }
             Self::UnexpectedChar(unexpected_char_error) => {
-                write!(f, "HttpParser: Expected char {:?}, got {:?} at index {}", unexpected_char_error.ch, unexpected_char_error.input_ch, unexpected_char_error.index)
-            },
+                write!(
+                    f,
+                    "HttpParser: Expected char {:?}, got {:?} at index {}",
+                    unexpected_char_error.ch,
+                    unexpected_char_error.input_ch,
+                    unexpected_char_error.index
+                )
+            }
             Self::EmptyHeaderValue(header_name) => {
                 // "Header value for key '{:?}' is empty", key
                 write!(f, "Header value for key '{:?}' is empty", header_name)
-            },
+            }
             Self::StatusCodeIsNotANumber(invalid_status_code) => {
-                write!(f, "Status code '{:?}' not a valid number", invalid_status_code)
+                write!(
+                    f,
+                    "Status code '{:?}' not a valid number",
+                    invalid_status_code
+                )
             }
         }
     }
@@ -48,18 +62,25 @@ type Result<T> = std::result::Result<T, HttpParserError>;
 pub struct HttpParser {
     input: Vec<char>,
     index: usize,
-    length: usize
+    length: usize,
 }
 
 impl HttpParser {
     pub fn new(input: &str) -> HttpParser {
         let chars: Vec<char> = input.chars().collect();
-        HttpParser { index: 0, length: chars.len(), input: chars }
+        HttpParser {
+            index: 0,
+            length: chars.len(),
+            input: chars,
+        }
     }
 
     fn check_len(&self) -> Result<()> {
         if self.index >= self.length {
-            return Err(HttpParserError::LenghtError(LenghtError { index: self.index, length: self.length }));
+            return Err(HttpParserError::LenghtError(LenghtError {
+                index: self.index,
+                length: self.length,
+            }));
         }
         Ok(())
     }
@@ -69,7 +90,11 @@ impl HttpParser {
         let input_ch = self.input[self.index];
 
         if input_ch != ch {
-            return Err(HttpParserError::UnexpectedChar(UnexpectedCharError { ch, input_ch, index: self.index }));
+            return Err(HttpParserError::UnexpectedChar(UnexpectedCharError {
+                ch,
+                input_ch,
+                index: self.index,
+            }));
         }
 
         Ok(())
@@ -246,7 +271,9 @@ impl HttpParser {
         let status_code = match status_code_str.parse::<u16>() {
             Ok(number) => number,
             Err(_) => {
-                return Err(HttpParserError::StatusCodeIsNotANumber(status_code_str.to_owned()));
+                return Err(HttpParserError::StatusCodeIsNotANumber(
+                    status_code_str.to_owned(),
+                ));
             }
         };
         self.consume_specific(' ')?;

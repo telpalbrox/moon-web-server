@@ -1,8 +1,8 @@
 use super::parser::HttpParser;
 use super::request::HttpRequest;
 use super::response::HttpResponse;
-use super::{HttpHeaders};
 use super::url::{URLParser, URL};
+use super::HttpHeaders;
 use std::collections::HashMap;
 use std::io::prelude::*;
 use std::net::TcpStream;

@@ -8,7 +8,10 @@ pub struct JsonParser {
 
 impl JsonParser {
     pub fn new(input: &str) -> Self {
-        Self { input: input.chars().collect(), index: 0 }
+        Self {
+            input: input.chars().collect(),
+            index: 0,
+        }
     }
 
     fn expect_char(&self, ch: char) {

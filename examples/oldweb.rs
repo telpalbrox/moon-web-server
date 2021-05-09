@@ -1,20 +1,19 @@
-use webserver::http::{HttpServer, HttpResponse, HttpHeaders};
-use webserver::http::send_http_request_with_headers;
-use webserver::json::{JsonValue};
-use webserver::templating::render_with_partials;
-use std::fs;
 use std::collections::HashMap;
-use std::thread;
+use std::fs;
 use std::sync::{mpsc::channel, Arc, Mutex};
-use std::time::{SystemTime, UNIX_EPOCH, Duration};
+use std::thread;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use webserver::http::send_http_request_with_headers;
+use webserver::http::{HttpHeaders, HttpResponse, HttpServer};
+use webserver::json::JsonValue;
+use webserver::templating::render_with_partials;
 
 fn read_file(path: &'static str) -> String {
     fs::read_to_string(path).unwrap()
 }
 
 fn html(res: &mut HttpResponse) {
-    res
-        .headers_mut()
+    res.headers_mut()
         .push(("Content-Type".to_owned(), "text/html".to_owned()));
 }
 
@@ -33,26 +32,38 @@ fn request(url: &str) -> JsonValue {
 }
 
 fn get_max_id() -> u64 {
-    let response = send_http_request_with_headers(&format!("{}/maxitem.json", HN_API_URL), headers());
+    let response =
+        send_http_request_with_headers(&format!("{}/maxitem.json", HN_API_URL), headers());
     response.json().as_number().expect("max_id is a number") as u64
 }
 
 fn get_updates() -> JsonValue {
-    let response = send_http_request_with_headers(&format!("{}/updates.json", HN_API_URL), headers());
+    let response =
+        send_http_request_with_headers(&format!("{}/updates.json", HN_API_URL), headers());
     response.json()
 }
 
 fn get_changed_items() -> Vec<u64> {
     match get_updates().as_object() {
         Some(updates) => {
-            return updates.get("items").unwrap().as_array().expect("updates is an array").into_iter().map(|value| value.as_number().expect("value is a number") as u64).collect()
-        },
-        None => return Vec::new()
+            return updates
+                .get("items")
+                .unwrap()
+                .as_array()
+                .expect("updates is an array")
+                .into_iter()
+                .map(|value| value.as_number().expect("value is a number") as u64)
+                .collect()
+        }
+        None => return Vec::new(),
     };
 }
 
 fn get_time_ago(time: f64) -> String {
-    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as f64;
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs() as f64;
     let minutes = (now - time) / 60f64;
     if minutes < 60f64 {
         return format!("{} minutes ago", minutes.round());
@@ -77,7 +88,8 @@ fn fetch_item(items_cache: &ItemsCacheMutex, id: u64, force: bool) -> JsonValue 
             return item_cache_read.get(&id).unwrap().clone();
         }
     }
-    let response = send_http_request_with_headers(&format!("{}/item/{}.json", HN_API_URL, id), headers());
+    let response =
+        send_http_request_with_headers(&format!("{}/item/{}.json", HN_API_URL, id), headers());
     let item = response.json();
     let item = match item {
         JsonValue::Object(_) => item,
@@ -102,21 +114,31 @@ fn get_item(items_cache: ItemsCacheMutex, id: u64) -> JsonValue {
     }
 
     let item_map = item.as_object_mut().expect("item is an object");
-    let time = item_map.get(&"time".to_owned()).expect("item doesn't have time").as_number().expect("time is a number");
-    item_map.insert("relative_time".to_owned(),JsonValue::String(get_time_ago(time)));
+    let time = item_map
+        .get(&"time".to_owned())
+        .expect("item doesn't have time")
+        .as_number()
+        .expect("time is a number");
+    item_map.insert(
+        "relative_time".to_owned(),
+        JsonValue::String(get_time_ago(time)),
+    );
     let kids = match item_map.get("kids") {
         Some(value) => value.as_array().expect("kids is an array"),
-        None => return item
+        None => return item,
     };
     if kids.is_empty() {
         return item;
     }
-    let kids_ids: Vec<u64> = kids.into_iter().map(|id| {
-        return match id {
-            JsonValue::Number(id) => *id as u64,
-            _ => panic!("expected ids to be numbers")
-        }
-    }).collect();
+    let kids_ids: Vec<u64> = kids
+        .into_iter()
+        .map(|id| {
+            return match id {
+                JsonValue::Number(id) => *id as u64,
+                _ => panic!("expected ids to be numbers"),
+            };
+        })
+        .collect();
     let kid_items = map_id_to_objects(&items_cache, kids_ids, true);
     item_map.insert("kids".to_owned(), kid_items);
 
@@ -129,7 +151,7 @@ fn get_items(items_cache: &ItemsCacheMutex, ids: &Vec<u64>) -> JsonValue {
     let stories_len = ids.len();
     for (i, id) in ids.into_iter().enumerate() {
         let tx = tx.clone();
-        let id = id.clone(); 
+        let id = id.clone();
         let mutex = items_cache.clone();
         joins.push(thread::spawn(move || {
             let item = fetch_item(&mutex, id, false);
@@ -147,11 +169,12 @@ fn get_items(items_cache: &ItemsCacheMutex, ids: &Vec<u64>) -> JsonValue {
         child.join().unwrap();
     }
 
-    stories_results.sort_by_key(|(i, _)| {
-        *i
-    });
+    stories_results.sort_by_key(|(i, _)| *i);
 
-    let stories_results = stories_results.into_iter().map(|(_, value)| value.clone()).collect();
+    let stories_results = stories_results
+        .into_iter()
+        .map(|(_, value)| value.clone())
+        .collect();
 
     JsonValue::Array(stories_results)
 }
@@ -169,26 +192,36 @@ fn map_id_to_objects(items_cache: &ItemsCacheMutex, ids: Vec<u64>, fetch_kids: b
             }
         };
 
-        let time = item.get(&"time".to_owned()).expect("item doesn't have time").as_number().expect("time is a number");
-        item.insert("relative_time".to_owned(),JsonValue::String(get_time_ago(time)));
+        let time = item
+            .get(&"time".to_owned())
+            .expect("item doesn't have time")
+            .as_number()
+            .expect("time is a number");
+        item.insert(
+            "relative_time".to_owned(),
+            JsonValue::String(get_time_ago(time)),
+        );
 
         if !fetch_kids {
             continue;
         }
-        
+
         let kids = match item.get("kids") {
             Some(value) => value.as_array().expect("kids is an array"),
-            None => continue
+            None => continue,
         };
         if kids.is_empty() {
             continue;
         }
-        let ids: Vec<u64> = kids.into_iter().map(|id| {
-            return match id {
-                JsonValue::Number(id) => *id as u64,
-                _ => panic!("expected ids to be numbers")
-            }
-        }).collect();
+        let ids: Vec<u64> = kids
+            .into_iter()
+            .map(|id| {
+                return match id {
+                    JsonValue::Number(id) => *id as u64,
+                    _ => panic!("expected ids to be numbers"),
+                };
+            })
+            .collect();
         let items = map_id_to_objects(items_cache, ids, true);
         item.insert("kids".to_owned(), items);
     }
@@ -202,7 +235,13 @@ fn fetch_stories(path: &str) -> JsonValue {
 
 fn get_stories(items_cache: &ItemsCacheMutex, path: &str) -> JsonValue {
     let stories_ids = fetch_stories(path);
-    let stories_ids: Vec<u64> = stories_ids.as_array().expect("stories_ids is an array").into_iter().take(30).map(|id| id.as_number().expect("id is a number") as u64).collect();
+    let stories_ids: Vec<u64> = stories_ids
+        .as_array()
+        .expect("stories_ids is an array")
+        .into_iter()
+        .take(30)
+        .map(|id| id.as_number().expect("id is a number") as u64)
+        .collect();
     map_id_to_objects(items_cache, stories_ids, false)
 }
 
@@ -214,7 +253,12 @@ fn warmup(server: &HttpServer<ItemsCache>) {
     let items_cache = server.state().clone();
     thread::spawn(move || {
         let top_stories = fetch_stories("topstories");
-        let kids: Vec<u64> = top_stories.as_array().expect("top_stories is an array").into_iter().map(|value| value.as_number().expect("value is a number") as u64).collect();
+        let kids: Vec<u64> = top_stories
+            .as_array()
+            .expect("top_stories is an array")
+            .into_iter()
+            .map(|value| value.as_number().expect("value is a number") as u64)
+            .collect();
         for id in kids {
             map_id_to_objects(&items_cache, vec![id], true);
         }
@@ -223,14 +267,12 @@ fn warmup(server: &HttpServer<ItemsCache>) {
 
 fn watch_changed_items(server: &HttpServer<ItemsCache>) {
     let items_cache = server.state().clone();
-    thread::spawn(move || {
-        loop {
-            println!("fetching updates");
-            for id in get_changed_items() {
-                fetch_item(&items_cache, id, true);
-            }
-            thread::sleep(Duration::from_secs(60));
+    thread::spawn(move || loop {
+        println!("fetching updates");
+        for id in get_changed_items() {
+            fetch_item(&items_cache, id, true);
         }
+        thread::sleep(Duration::from_secs(60));
     });
 }
 
@@ -244,7 +286,10 @@ fn watch_new_items(server: &HttpServer<ItemsCache>) {
             let new_max_id = get_max_id();
             if new_max_id < 27017975 {
                 // not possible to get something older than this id
-                eprintln!("Weird value returned by max item id: {}, not fetching updates", new_max_id);
+                eprintln!(
+                    "Weird value returned by max item id: {}, not fetching updates",
+                    new_max_id
+                );
                 continue;
             }
             if new_max_id == max_id {
@@ -270,13 +315,17 @@ fn oldweb(server: &mut HttpServer<ItemsCache>) {
         let mut partials = HashMap::new();
         partials.insert("body".to_owned(), hn);
         partials.insert("hnitemsummary".to_owned(), hnitemsummary);
-        res.set_body(render_with_partials(&layout, &JsonValue::Object(context), &partials));
+        res.set_body(render_with_partials(
+            &layout,
+            &JsonValue::Object(context),
+            &partials,
+        ));
     });
 
     server.get("/hn/:id", &|req, res, items_cache| {
         let id = match req.params.get("id") {
             Some(id) => id,
-            None => panic!("hn id not found")
+            None => panic!("hn id not found"),
         };
         let id = match id.parse::<u64>() {
             Ok(id) => id,

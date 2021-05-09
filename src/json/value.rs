@@ -52,8 +52,8 @@ impl JsonValue {
         match self {
             Self::Object(map) => {
                 return Some(map);
-            },
-            _ => None
+            }
+            _ => None,
         }
     }
 
@@ -61,8 +61,8 @@ impl JsonValue {
         match self {
             Self::Object(map) => {
                 return Some(map);
-            },
-            _ => None
+            }
+            _ => None,
         }
     }
 
@@ -70,8 +70,8 @@ impl JsonValue {
         match self {
             Self::Number(number) => {
                 return Some(*number);
-            },
-            _ => None
+            }
+            _ => None,
         }
     }
 
@@ -79,8 +79,8 @@ impl JsonValue {
         match self {
             Self::Array(array) => {
                 return Some(array);
-            },
-            _ => None
+            }
+            _ => None,
         }
     }
 
@@ -88,14 +88,14 @@ impl JsonValue {
         match self {
             Self::Array(array) => {
                 return Some(array);
-            },
-            _ => None
+            }
+            _ => None,
         }
     }
 }
 
 impl FromIterator<JsonValue> for JsonValue {
-    fn from_iter<I: IntoIterator<Item=JsonValue>>(iter: I) -> Self {
+    fn from_iter<I: IntoIterator<Item = JsonValue>>(iter: I) -> Self {
         let mut array = Vec::new();
 
         for value in iter {

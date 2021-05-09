@@ -11,7 +11,11 @@ pub fn render(input: &str, context: &JsonValue) -> String {
     render_impl(input, context, &HashMap::new())
 }
 
-pub fn render_with_partials(input: &str, context: &JsonValue, partials: &HashMap<String, String>) -> String {
+pub fn render_with_partials(
+    input: &str,
+    context: &JsonValue,
+    partials: &HashMap<String, String>,
+) -> String {
     render_impl(input, context, partials)
 }
 
@@ -25,8 +29,8 @@ fn render_impl(input: &str, context: &JsonValue, partials: &HashMap<String, Stri
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::json::JsonParser;
+    use super::*;
     use std::collections::HashMap;
 
     #[test]
@@ -37,10 +41,7 @@ mod tests {
             JsonValue::String("value test".to_owned()),
         );
         assert_eq!(
-            render(
-                "Input {{test}} more text",
-                &JsonValue::Object(context)
-            ),
+            render("Input {{test}} more text", &JsonValue::Object(context)),
             "Input value test more text"
         );
     }
@@ -131,25 +132,17 @@ mod tests {
         context.insert("list".to_owned(), list);
 
         assert_eq!(
-            render(
-                "{{^list}}Yay lists!{{/list}}",
-                &JsonValue::Object(context)
-            ),
+            render("{{^list}}Yay lists!{{/list}}", &JsonValue::Object(context)),
             "Yay lists!"
         );
     }
 
     #[test]
     fn render_inverted_array_non_empty() {
-        let context = JsonParser::new("{ \"list\": [ { \"n\": 1 }, { \"n\": 2 }, { \"n\": 3 } ] }").parse();
+        let context =
+            JsonParser::new("{ \"list\": [ { \"n\": 1 }, { \"n\": 2 }, { \"n\": 3 } ] }").parse();
 
-        assert_eq!(
-            render(
-                "{{^list}}{{n}}{{/list}}",
-                &context
-            ),
-            ""
-        );
+        assert_eq!(render("{{^list}}{{n}}{{/list}}", &context), "");
     }
 
     #[test]
@@ -168,7 +161,9 @@ mod tests {
         let mut context = HashMap::new();
         context.insert(
             "test".to_owned(),
-            JsonValue::String("Colors <h1 class=\"test\" id='test'>Test & roll \\lol `lal`</h1>".to_owned()),
+            JsonValue::String(
+                "Colors <h1 class=\"test\" id='test'>Test & roll \\lol `lal`</h1>".to_owned(),
+            ),
         );
         assert_eq!(
             render(
@@ -184,13 +179,12 @@ mod tests {
         let mut context = HashMap::new();
         context.insert(
             "test".to_owned(),
-            JsonValue::String("Colors <h1 class=\"test\" id='test'>Test & roll \\lol `lal`</h1>".to_owned()),
+            JsonValue::String(
+                "Colors <h1 class=\"test\" id='test'>Test & roll \\lol `lal`</h1>".to_owned(),
+            ),
         );
         assert_eq!(
-            render(
-                "<div>{{&test}}</div>",
-                &JsonValue::Object(context)
-            ),
+            render("<div>{{&test}}</div>", &JsonValue::Object(context)),
             "<div>Colors <h1 class=\"test\" id='test'>Test & roll \\lol `lal`</h1></div>"
         );
     }
@@ -200,7 +194,10 @@ mod tests {
         let context = JsonValue::Object(HashMap::new());
         let mut partials = HashMap::new();
         partials.insert("text".to_owned(), "from partial".to_owned());
-        assert_eq!(render_with_partials("{{>text}}", &context, &partials), "from partial");
+        assert_eq!(
+            render_with_partials("{{>text}}", &context, &partials),
+            "from partial"
+        );
     }
 
     #[test]
@@ -212,20 +209,29 @@ mod tests {
     #[test]
     fn render_partial_context() {
         let mut context = HashMap::new();
-        context.insert(
-            "text".to_owned(),
-            JsonValue::String("Content".to_owned()),
-        );
+        context.insert("text".to_owned(), JsonValue::String("Content".to_owned()));
         let mut partials = HashMap::new();
         partials.insert("partial".to_owned(), "*{{text}}*".to_owned());
-        assert_eq!(render_with_partials("{{>partial}}", &JsonValue::Object(context), &partials), "*Content*");
+        assert_eq!(
+            render_with_partials("{{>partial}}", &JsonValue::Object(context), &partials),
+            "*Content*"
+        );
     }
 
     #[test]
     fn render_recursive_partial() {
-        let context = JsonParser::new("{ \"content\": \"X\", \"nodes\": [ { \"content\": \"Y\", \"nodes\": [] } ] }").parse();
+        let context = JsonParser::new(
+            "{ \"content\": \"X\", \"nodes\": [ { \"content\": \"Y\", \"nodes\": [] } ] }",
+        )
+        .parse();
         let mut partials = HashMap::new();
-        partials.insert("node".to_owned(), "{{content}}<{{#nodes}}{{>node}}{{/nodes}}>".to_owned());
-        assert_eq!(render_with_partials("{{>node}}", &context, &partials), "X<Y<>>");
+        partials.insert(
+            "node".to_owned(),
+            "{{content}}<{{#nodes}}{{>node}}{{/nodes}}>".to_owned(),
+        );
+        assert_eq!(
+            render_with_partials("{{>node}}", &context, &partials),
+            "X<Y<>>"
+        );
     }
 }

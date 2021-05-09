@@ -4,8 +4,8 @@ use super::HttpResponse;
 use std::env;
 use std::io::prelude::*;
 use std::net::TcpListener;
-use std::sync::{Arc, Mutex};
 use std::net::TcpStream;
+use std::sync::{Arc, Mutex};
 
 use super::HttpRequest;
 
@@ -63,13 +63,13 @@ fn send_response(stream: &mut TcpStream, response: HttpResponse) {
     let response = response.to_string();
     // println!("response: {:?}", response);
     match stream.write(response.as_bytes()) {
-        Ok(_) => {},
+        Ok(_) => {}
         Err(err) => {
             eprintln!("Error writing to TCP socket: {}", err);
         }
     }
     match stream.flush() {
-        Ok(_) => {},
+        Ok(_) => {}
         Err(err) => {
             eprintln!("Error flusing TCP socket: {}", err);
         }
@@ -78,14 +78,14 @@ fn send_response(stream: &mut TcpStream, response: HttpResponse) {
 
 pub struct HttpServer<T: Send + Sync + 'static> {
     routes: Arc<Vec<Route<T>>>,
-    state: Arc<Mutex<T>>
+    state: Arc<Mutex<T>>,
 }
 
 impl<T: Send + Sync> HttpServer<T> {
     pub fn new(state: T) -> HttpServer<T> {
         HttpServer {
             routes: Arc::new(Vec::new()),
-            state: Arc::new(Mutex::new(state))
+            state: Arc::new(Mutex::new(state)),
         }
     }
 
@@ -144,7 +144,10 @@ impl<T: Send + Sync> HttpServer<T> {
                     Ok(request) => request,
                     Err(err) => {
                         eprintln!("{}", err);
-                        send_response(&mut stream, HttpResponse::bad_request("Error parsing http request"));
+                        send_response(
+                            &mut stream,
+                            HttpResponse::bad_request("Error parsing http request"),
+                        );
                         return;
                     }
                 };

@@ -37,64 +37,63 @@ fn main() {
         }),
     });
 
-    server.get(
-        "/id/:id",
-        &|request: &HttpRequest, response: &mut HttpResponse, _| {
-            response.set_body(format!("url id: {}", request.params.get("id").unwrap()));
-        },
-    );
+    server.get("/id/:id", &|request: &HttpRequest,
+                            response: &mut HttpResponse,
+                            _| {
+        response.set_body(format!("url id: {}", request.params.get("id").unwrap()));
+    });
 
-    server.get(
-        "/query",
-        &|request: &HttpRequest, response: &mut HttpResponse, _| {
-            response.set_body(format!(
-                "query param key: {}",
-                request
-                    .query
-                    .get("key")
-                    .unwrap_or(&String::from("not present"))
-            ));
-        },
-    );
-
-    server.get(
-        "/hello",
-        &|request: &HttpRequest, response: &mut HttpResponse, _| {
-            response
-                .headers_mut()
-                .push(("Content-Type".to_owned(), "text/html".to_owned()));
-            let mut context = HashMap::new();
-            let name = request
+    server.get("/query", &|request: &HttpRequest,
+                           response: &mut HttpResponse,
+                           _| {
+        response.set_body(format!(
+            "query param key: {}",
+            request
                 .query
-                .get("name")
-                .unwrap_or(&String::from(""))
-                .to_owned();
-            if name == "victoria" {
-                context.insert(String::from("beloved"), JsonValue::Boolean(true));
-            }
-            context.insert("name".to_owned(), JsonValue::String(name));
-            response.set_body(render(
-                &read_file("./examples/templates/hello.html").to_owned(),
-                &JsonValue::Object(context),
-            ));
-        },
-    );
+                .get("key")
+                .unwrap_or(&String::from("not present"))
+        ));
+    });
 
-    server.get(
-        "/headers",
-        &|request: &HttpRequest, response: &mut HttpResponse, _| {
-            response
-                .headers_mut()
-                .push(("Content-Type".to_owned(), "text/html".to_owned()));
+    server.get("/hello", &|request: &HttpRequest,
+                           response: &mut HttpResponse,
+                           _| {
+        response
+            .headers_mut()
+            .push(("Content-Type".to_owned(), "text/html".to_owned()));
+        let mut context = HashMap::new();
+        let name = request
+            .query
+            .get("name")
+            .unwrap_or(&String::from(""))
+            .to_owned();
+        if name == "victoria" {
+            context.insert(String::from("beloved"), JsonValue::Boolean(true));
+        }
+        context.insert("name".to_owned(), JsonValue::String(name));
+        response.set_body(render(
+            &read_file("./examples/templates/hello.html").to_owned(),
+            &JsonValue::Object(context),
+        ));
+    });
 
-            let mut context = HashMap::new();
-            context.insert("headers".to_owned(), JsonValue::from(request.headers.clone()));
-            response.set_body(render(
-                &read_file("./examples/templates/headers.html").to_owned(),
-                &JsonValue::from(context),
-            ));
-        },
-    );
+    server.get("/headers", &|request: &HttpRequest,
+                             response: &mut HttpResponse,
+                             _| {
+        response
+            .headers_mut()
+            .push(("Content-Type".to_owned(), "text/html".to_owned()));
+
+        let mut context = HashMap::new();
+        context.insert(
+            "headers".to_owned(),
+            JsonValue::from(request.headers.clone()),
+        );
+        response.set_body(render(
+            &read_file("./examples/templates/headers.html").to_owned(),
+            &JsonValue::from(context),
+        ));
+    });
 
     let mutex = server.state();
     let mut state = mutex.lock().unwrap();
@@ -102,32 +101,29 @@ fn main() {
     drop(state);
     drop(mutex);
 
-    server.get(
-        "/httpreq",
-        &|_request: &HttpRequest, response: &mut HttpResponse, _| {
-            response
-                .headers_mut()
-                .push(("Content-Type".to_owned(), "application/json".to_owned()));
-            let bin_response = send_http_request("http://httpbin.org/get");
-            response.set_body(bin_response.body);
-        },
-    );
-
-
+    server.get("/httpreq", &|_request: &HttpRequest,
+                             response: &mut HttpResponse,
+                             _| {
+        response
+            .headers_mut()
+            .push(("Content-Type".to_owned(), "application/json".to_owned()));
+        let bin_response = send_http_request("http://httpbin.org/get");
+        response.set_body(bin_response.body);
+    });
 
     server.get(
         "/visits",
-        &|_request: &HttpRequest, response: &mut HttpResponse, state: Arc<Mutex<HashMap<String, String>>>| {
+        &|_request: &HttpRequest,
+          response: &mut HttpResponse,
+          state: Arc<Mutex<HashMap<String, String>>>| {
             let mut state = state.lock().unwrap();
             let mut visits: u64 = state.get("visits").unwrap().parse().unwrap();
             visits = visits + 1;
             state.insert(String::from("visits"), visits.to_string());
 
-
             response.set_body(format!("visits: {}", visits.to_string()));
         },
     );
-
 
     server.start();
 }
