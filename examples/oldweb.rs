@@ -27,19 +27,19 @@ fn headers() -> HttpHeaders {
 }
 
 fn request(url: &str) -> JsonValue {
-    let response = send_http_request_with_headers(url, headers());
+    let response = send_http_request_with_headers(url, headers()).unwrap();
     response.json()
 }
 
 fn get_max_id() -> u64 {
     let response =
-        send_http_request_with_headers(&format!("{}/maxitem.json", HN_API_URL), headers());
+        send_http_request_with_headers(&format!("{}/maxitem.json", HN_API_URL), headers()).unwrap();
     response.json().as_number().expect("max_id is a number") as u64
 }
 
 fn get_updates() -> JsonValue {
     let response =
-        send_http_request_with_headers(&format!("{}/updates.json", HN_API_URL), headers());
+        send_http_request_with_headers(&format!("{}/updates.json", HN_API_URL), headers()).unwrap();
     response.json()
 }
 
@@ -89,7 +89,7 @@ fn fetch_item(items_cache: &ItemsCacheMutex, id: u64, force: bool) -> JsonValue 
         }
     }
     let response =
-        send_http_request_with_headers(&format!("{}/item/{}.json", HN_API_URL, id), headers());
+        send_http_request_with_headers(&format!("{}/item/{}.json", HN_API_URL, id), headers()).unwrap();
     let item = response.json();
     let item = match item {
         JsonValue::Object(_) => item,

@@ -297,17 +297,17 @@ impl HttpParser {
         })
     }
 
-    pub fn parse_response(&mut self) -> HttpResponse {
-        let (version, status_code, reason) = self.parse_status_line().unwrap();
-        let (headers, body) = self.parse_message().unwrap();
+    pub fn parse_response(&mut self) -> Result<HttpResponse> {
+        let (version, status_code, reason) = self.parse_status_line()?;
+        let (headers, body) = self.parse_message()?;
 
-        HttpResponse {
+        Ok(HttpResponse {
             version,
             status_code,
             reason,
             headers,
             body,
-        }
+        })
     }
 }
 
@@ -385,7 +385,7 @@ mod tests {
     #[test]
     fn parse_response() {
         let mut parser = HttpParser::new(BASIC_RESPONSE);
-        let response = parser.parse_response();
+        let response = parser.parse_response().unwrap();
         assert_eq!(response.version, "1.1");
         assert_eq!(response.status_code, 200);
         assert_eq!(response.reason, "Ok");
@@ -398,7 +398,7 @@ mod tests {
     #[test]
     fn parse_hn_api_response() {
         let mut parser = HttpParser::new(HN_API_RESPONSE);
-        let response = parser.parse_response();
+        let response = parser.parse_response().unwrap();
         assert_eq!(response.headers.len(), 11);
     }
 }

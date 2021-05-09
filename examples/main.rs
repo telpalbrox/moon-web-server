@@ -107,7 +107,7 @@ fn main() {
         response
             .headers_mut()
             .push(("Content-Type".to_owned(), "application/json".to_owned()));
-        let bin_response = send_http_request("http://httpbin.org/get");
+        let bin_response = send_http_request("http://httpbin.org/get").unwrap();
         response.set_body(bin_response.body);
     });
 

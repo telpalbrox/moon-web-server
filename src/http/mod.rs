@@ -26,6 +26,7 @@ pub mod server;
 mod url;
 pub use client::{send_http_request, send_http_request_with_headers};
 pub use parser::HttpParser;
+pub use parser::HttpParserError;
 pub use request::HttpRequest;
 pub use response::HttpResponse;
 pub use server::HttpServer;
