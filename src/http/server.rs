@@ -5,6 +5,7 @@ use std::env;
 use std::io::prelude::*;
 use std::net::TcpListener;
 use std::sync::{Arc, Mutex};
+use std::net::TcpStream;
 
 use super::HttpRequest;
 
@@ -58,6 +59,23 @@ impl<T> Route<T> {
     }
 }
 
+fn send_response(stream: &mut TcpStream, response: HttpResponse) {
+    let response = response.to_string();
+    // println!("response: {:?}", response);
+    match stream.write(response.as_bytes()) {
+        Ok(_) => {},
+        Err(err) => {
+            eprintln!("Error writing to TCP socket: {}", err);
+        }
+    }
+    match stream.flush() {
+        Ok(_) => {},
+        Err(err) => {
+            eprintln!("Error flusing TCP socket: {}", err);
+        }
+    };
+}
+
 pub struct HttpServer<T: Send + Sync + 'static> {
     routes: Arc<Vec<Route<T>>>,
     state: Arc<Mutex<T>>
@@ -98,18 +116,38 @@ impl<T: Send + Sync> HttpServer<T> {
         let pool = ThreadPool::new(4);
 
         for stream in listener.incoming() {
-            let mut stream = stream.unwrap();
+            let mut stream = match stream {
+                Ok(stream) => stream,
+                Err(err) => {
+                    eprintln!("Error opening TCP stream: {}", err);
+                    continue;
+                }
+            };
             let routes = Arc::clone(&self.routes);
             let mutex = Arc::clone(&self.state);
 
             pool.execute(move || {
                 routes.len();
                 let mut buffer = [0; 8192];
-                stream.read(&mut buffer).unwrap();
+                let read_result = stream.read(&mut buffer);
+                if read_result.is_err() {
+                    return;
+                }
+                let bytes_read = read_result.unwrap();
+                if bytes_read == 0 || bytes_read >= buffer.len() {
+                    return;
+                }
                 let raw_request = String::from_utf8_lossy(&buffer).replace('\0', "");
                 // println!("raw_request: {:?}", raw_request);
 
-                let mut request = HttpParser::new(&raw_request).parse_request();
+                let mut request = match HttpParser::new(&raw_request).parse_request() {
+                    Ok(request) => request,
+                    Err(err) => {
+                        eprintln!("{}", err);
+                        send_response(&mut stream, HttpResponse::bad_request("Error parsing http request"));
+                        return;
+                    }
+                };
 
                 let mut found_route = None;
                 for i in 0..routes.len() {
@@ -146,10 +184,7 @@ impl<T: Send + Sync> HttpServer<T> {
                     }
                 };
 
-                let response = result.to_string();
-                // println!("response: {:?}", response);
-                stream.write(response.as_bytes()).unwrap();
-                stream.flush().unwrap();
+                send_response(&mut stream, result);
             });
         }
     }

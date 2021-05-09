@@ -1,5 +1,49 @@
 use super::{HttpRequest, HttpResponse};
-use std::collections::HashMap;
+use std::fmt;
+use std::{collections::HashMap, fmt::Display, fmt::Formatter};
+
+#[derive(Debug, Clone)]
+pub struct LenghtError {
+    index: usize,
+    length: usize,
+}
+
+#[derive(Debug, Clone)]
+pub struct UnexpectedCharError {
+    ch: char,
+    input_ch: char,
+    index: usize,
+}
+
+#[derive(Debug, Clone)]
+pub enum HttpParserError {
+    LenghtError(LenghtError),
+    UnexpectedChar(UnexpectedCharError),
+    EmptyHeaderValue(String),
+    StatusCodeIsNotANumber(String),
+}
+
+impl Display for HttpParserError {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        match self {
+            Self::LenghtError(length_error) => {
+                write!(f, "Expected char at index {} but input lenght is '{}'", length_error.index, length_error.length)
+            },
+            Self::UnexpectedChar(unexpected_char_error) => {
+                write!(f, "HttpParser: Expected char {:?}, got {:?} at index {}", unexpected_char_error.ch, unexpected_char_error.input_ch, unexpected_char_error.index)
+            },
+            Self::EmptyHeaderValue(header_name) => {
+                // "Header value for key '{:?}' is empty", key
+                write!(f, "Header value for key '{:?}' is empty", header_name)
+            },
+            Self::StatusCodeIsNotANumber(invalid_status_code) => {
+                write!(f, "Status code '{:?}' not a valid number", invalid_status_code)
+            }
+        }
+    }
+}
+
+type Result<T> = std::result::Result<T, HttpParserError>;
 
 pub struct HttpParser {
     input: Vec<char>,
@@ -13,44 +57,43 @@ impl HttpParser {
         HttpParser { index: 0, length: chars.len(), input: chars }
     }
 
-    fn check_len(&self) {
+    fn check_len(&self) -> Result<()> {
         if self.index >= self.length {
-            panic!(
-                "HttpParser: Expected char at index '{}' but input lenght is '{}'",
-                self.index,
-                self.length
-            );
+            return Err(HttpParserError::LenghtError(LenghtError { index: self.index, length: self.length }));
         }
+        Ok(())
     }
 
-    fn expect_char(&self, ch: char) {
-        self.check_len();
+    fn expect_char(&self, ch: char) -> Result<()> {
+        self.check_len()?;
         let input_ch = self.input[self.index];
 
-        assert_eq!(
-            input_ch, ch,
-            "HttpParser: Expected char {:?}, got {:?} at index {}",
-            ch, input_ch, self.index
-        );
+        if input_ch != ch {
+            return Err(HttpParserError::UnexpectedChar(UnexpectedCharError { ch, input_ch, index: self.index }));
+        }
+
+        Ok(())
     }
 
-    fn consume_specific(&mut self, ch: char) {
-        self.expect_char(ch);
+    fn consume_specific(&mut self, ch: char) -> Result<()> {
+        self.expect_char(ch)?;
         self.index = self.index + 1;
+        Ok(())
     }
 
-    fn consume_specific_string(&mut self, string: &str) {
-        string.chars().for_each(|ch| {
-            self.consume_specific(ch);
-        });
+    fn consume_specific_string(&mut self, string: &str) -> Result<()> {
+        for ch in string.chars() {
+            self.consume_specific(ch)?;
+        }
+        Ok(())
     }
 
-    fn consume(&mut self) -> char {
-        self.check_len();
+    fn consume(&mut self) -> Result<char> {
+        self.check_len()?;
         let input_ch = self.input[self.index];
 
         self.index = self.index + 1;
-        input_ch
+        Ok(input_ch)
     }
 
     fn peek_index(&self, index: usize) -> Option<&char> {
@@ -64,16 +107,17 @@ impl HttpParser {
         self.peek_index(self.index)
     }
 
-    fn consume_whitespace(&mut self) {
+    fn consume_whitespace(&mut self) -> Result<()> {
         while let Some(ch) = self.peek() {
             if !ch.is_whitespace() {
                 break;
             }
-            self.consume();
+            self.consume()?;
         }
+        Ok(())
     }
 
-    fn parse_string_with_delimiter(&mut self, delimiter: Option<char>) -> String {
+    fn parse_string_with_delimiter(&mut self, delimiter: Option<char>) -> Result<String> {
         let mut string = String::new();
         let mut peek_index = self.index;
         loop {
@@ -97,41 +141,41 @@ impl HttpParser {
 
         if peek_index > self.index {
             while peek_index != self.index {
-                string.push(self.consume())
+                string.push(self.consume()?)
             }
         }
 
         if self.index < self.length {
             if let Some(delimiter) = delimiter {
-                self.consume_specific(delimiter);
+                self.consume_specific(delimiter)?;
             }
         }
 
-        string
+        Ok(string)
     }
 
-    fn parse_string(&mut self) -> String {
+    fn parse_string(&mut self) -> Result<String> {
         self.parse_string_with_delimiter(None)
     }
 
-    fn parse_headers(&mut self) -> Vec<(String, String)> {
+    fn parse_headers(&mut self) -> Result<Vec<(String, String)>> {
         let mut headers = Vec::new();
 
         if self.peek() == Some(&'\r') {
-            return headers;
+            return Ok(headers);
         }
 
         loop {
             if self.index == self.length {
                 break;
             }
-            let key = self.parse_string_with_delimiter(Some(':'));
+            let key = self.parse_string_with_delimiter(Some(':'))?;
             if key.is_empty() {
                 break;
             }
-            self.consume_whitespace();
-            let value = self.parse_string_with_delimiter(Some('\r'));
-            self.consume_specific('\n');
+            self.consume_whitespace()?;
+            let value = self.parse_string_with_delimiter(Some('\r'))?;
+            self.consume_specific('\n')?;
             if value.is_empty() {
                 panic!("Header value for key '{:?}' is empty", key);
             }
@@ -141,10 +185,10 @@ impl HttpParser {
             }
         }
 
-        self.consume_specific('\r');
-        self.consume_specific('\n');
+        self.consume_specific('\r')?;
+        self.consume_specific('\n')?;
 
-        headers
+        Ok(headers)
     }
 
     fn parse_query_params(uri: &String) -> HashMap<String, String> {
@@ -176,41 +220,46 @@ impl HttpParser {
         query_params
     }
 
-    fn parse_request_line(&mut self) -> (String, String, String) {
-        let method = self.parse_string();
-        self.consume_whitespace();
-        let uri = self.parse_string();
-        self.consume_whitespace();
-        self.consume_specific_string("HTTP/");
-        let version = self.parse_string();
-        self.consume_specific('\r');
-        self.consume_specific('\n');
-        (method, uri, version)
+    fn parse_request_line(&mut self) -> Result<(String, String, String)> {
+        let method = self.parse_string()?;
+        self.consume_whitespace()?;
+        let uri = self.parse_string()?;
+        self.consume_whitespace()?;
+        self.consume_specific_string("HTTP/")?;
+        let version = self.parse_string()?;
+        self.consume_specific('\r')?;
+        self.consume_specific('\n')?;
+        Ok((method, uri, version))
     }
 
-    fn parse_message(&mut self) -> (Vec<(String, String)>, String) {
-        let headers = self.parse_headers();
-        let body = self.parse_string_with_delimiter(Some('\0'));
-        (headers, body)
+    fn parse_message(&mut self) -> Result<(Vec<(String, String)>, String)> {
+        let headers = self.parse_headers()?;
+        let body = self.parse_string_with_delimiter(Some('\0'))?;
+        Ok((headers, body))
     }
 
-    fn parse_status_line(&mut self) -> (String, u16, String) {
-        self.consume_specific_string("HTTP/");
-        let version = self.parse_string();
-        self.consume_specific(' ');
-        let status_code_str = self.parse_string();
-        let status_code = status_code_str.parse::<u16>().unwrap();
-        self.consume_specific(' ');
-        let reason = self.parse_string_with_delimiter(Some('\r'));
-        self.consume_specific('\n');
-        (version, status_code, reason)
+    fn parse_status_line(&mut self) -> Result<(String, u16, String)> {
+        self.consume_specific_string("HTTP/")?;
+        let version = self.parse_string()?;
+        self.consume_specific(' ')?;
+        let status_code_str = self.parse_string()?;
+        let status_code = match status_code_str.parse::<u16>() {
+            Ok(number) => number,
+            Err(_) => {
+                return Err(HttpParserError::StatusCodeIsNotANumber(status_code_str.to_owned()));
+            }
+        };
+        self.consume_specific(' ')?;
+        let reason = self.parse_string_with_delimiter(Some('\r'))?;
+        self.consume_specific('\n')?;
+        Ok((version, status_code, reason))
     }
 
-    pub fn parse_request(&mut self) -> HttpRequest {
-        let (method, uri, version) = self.parse_request_line();
-        let (headers, body) = self.parse_message();
+    pub fn parse_request(&mut self) -> Result<HttpRequest> {
+        let (method, uri, version) = self.parse_request_line()?;
+        let (headers, body) = self.parse_message()?;
 
-        HttpRequest {
+        Ok(HttpRequest {
             method,
             headers,
             query: HttpParser::parse_query_params(&uri),
@@ -218,12 +267,12 @@ impl HttpParser {
             version,
             body,
             params: HashMap::new(),
-        }
+        })
     }
 
     pub fn parse_response(&mut self) -> HttpResponse {
-        let (version, status_code, reason) = self.parse_status_line();
-        let (headers, body) = self.parse_message();
+        let (version, status_code, reason) = self.parse_status_line().unwrap();
+        let (headers, body) = self.parse_message().unwrap();
 
         HttpResponse {
             version,
@@ -254,7 +303,7 @@ mod tests {
     #[test]
     fn parse_basic_request() {
         let mut parser = HttpParser::new(BASIC_REQUEST);
-        let request = parser.parse_request();
+        let request = parser.parse_request().unwrap();
         assert_eq!(request.method, "GET");
         assert_eq!(request.uri, "/test");
         assert_eq!(request.version, "1.1");
@@ -266,7 +315,7 @@ mod tests {
     #[test]
     fn parse_empty_header_request() {
         let mut parser = HttpParser::new(EMPTY_HEADER_REQUEST);
-        let request = parser.parse_request();
+        let request = parser.parse_request().unwrap();
         assert_eq!(request.method, "GET");
         assert_eq!(request.uri, "/test");
         assert_eq!(request.version, "1.1");
@@ -276,31 +325,31 @@ mod tests {
     #[test]
     fn parse_post_request() {
         let mut parser = HttpParser::new(POST_REQUEST);
-        let request = parser.parse_request();
+        let request = parser.parse_request().unwrap();
         assert_eq!(request.body, "test rust2");
     }
 
     #[test]
     fn parse_firefox_request() {
         let mut parser = HttpParser::new(FIREFOX_REQUEST);
-        let request = parser.parse_request();
+        let request = parser.parse_request().unwrap();
         assert_eq!(request.headers.len(), 7);
     }
 
     #[test]
     fn parse_query_params() {
         let mut parser = HttpParser::new(SINGLE_QUERY_REQUEST);
-        let request = parser.parse_request();
+        let request = parser.parse_request().unwrap();
         assert_eq!(request.query.len(), 1);
         assert_eq!(request.query.get("query"), Some(&String::from("1")));
         assert_eq!(request.query.get("query2"), None);
         let mut parser = HttpParser::new(QUERY_REQUEST);
-        let request = parser.parse_request();
+        let request = parser.parse_request().unwrap();
         assert_eq!(request.query.len(), 2);
         assert_eq!(request.query.get("query"), Some(&String::from("1")));
         assert_eq!(request.query.get("query2"), Some(&String::from("2")));
         let mut parser = HttpParser::new(EMPTY_QUERY_REQUEST);
-        let request = parser.parse_request();
+        let request = parser.parse_request().unwrap();
         assert_eq!(request.query.len(), 1);
         assert_eq!(request.query.get("query"), Some(&String::from("")));
         assert_eq!(request.query.get("query2"), None);

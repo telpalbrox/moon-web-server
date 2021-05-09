@@ -36,6 +36,13 @@ impl HttpResponse {
         }
     }
 
+    pub fn bad_request(message: &str) -> HttpResponse {
+        let mut response = Self::new();
+        response.status_code = 404;
+        response.body = message.to_owned();
+        response
+    }
+
     pub fn headers(&self) -> &HttpHeaders {
         &self.headers
     }
