@@ -9,11 +9,13 @@ use std::sync::{Arc, Mutex};
 use super::HttpRequest;
 
 type State<T> = Arc<Mutex<T>>;
-type RouteHandler<T> = dyn Fn(HttpRequest, &mut HttpResponse, State<T>) -> () + Send + Sync;
+type RouteHandler<T> = dyn Fn(&HttpRequest, &mut HttpResponse, State<T>) -> () + Send + Sync;
+type Middleware<T> = dyn Fn(&HttpRequest, &mut HttpResponse, State<T>) -> bool + Send + Sync;
 
 pub struct Route<T> {
     pub method: String,
     pub uri: String,
+    pub middleware: Arc<Vec<Box<Middleware<T>>>>,
     pub handler: Arc<RouteHandler<T>>,
 }
 
@@ -81,6 +83,7 @@ impl<T: Send + Sync> HttpServer<T> {
         let route = Route {
             uri: uri.to_owned(),
             method: "GET".to_owned(),
+            middleware: Arc::new(Vec::new()),
             handler: Arc::new(handler),
         };
         Arc::get_mut(&mut self.routes).unwrap().push(route);
@@ -122,7 +125,17 @@ impl<T: Send + Sync> HttpServer<T> {
                         let handler = &route.handler;
                         route.add_params(&mut request);
                         let mut response = HttpResponse::new();
-                        handler(request, &mut response, mutex);
+                        let middlewares = Arc::clone(&route.middleware);
+                        let mut should_handle = true;
+                        for middleware in middlewares.iter() {
+                            should_handle = middleware(&request, &mut response, mutex.clone());
+                            if !should_handle {
+                                break;
+                            }
+                        }
+                        if should_handle {
+                            handler(&request, &mut response, mutex);
+                        }
                         response
                     }
                     None => {
@@ -152,6 +165,7 @@ mod tests {
         let route: Route<()> = Route {
             method: String::from("GET"),
             uri: String::from("/test"),
+            middleware: Arc::new(Vec::new()),
             handler: Arc::new(|_, _, _| ()),
         };
         assert_eq!(route.matches_uri(&"/test?query=1".to_owned()), true);
@@ -162,6 +176,7 @@ mod tests {
         let route: Route<()> = Route {
             method: String::from("GET"),
             uri: String::from("/test/:test_param"),
+            middleware: Arc::new(Vec::new()),
             handler: Arc::new(|_, _, _| ()),
         };
         assert_eq!(route.matches_uri(&"/test".to_owned()), false);
@@ -173,6 +188,7 @@ mod tests {
         let route: Route<()> = Route {
             method: String::from("GET"),
             uri: String::from("/test/:test_param"),
+            middleware: Arc::new(Vec::new()),
             handler: Arc::new(|_, _, _| ()),
         };
         let mut request = HttpRequest::new_with_uri("/test/some_param".to_owned());
